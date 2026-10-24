@@ -6,6 +6,8 @@
 Проверка этапа 02 выполнена в `develop` на основе опубликованного этапа 01:
 `1a80825f0075fe0c28c0e7014d49871f6ce9b230`.
 Состояние публикации каждого этапа приведено отдельно ниже.
+Проверенный commit кода этапа 02 — `fc14d27364742c3dd14af988af3e101b1cb47070`;
+сведения о публикации добавлены после его проверки, без изменения кода.
 
 ## Реализованная граница этапа 02
 
@@ -93,8 +95,8 @@ HTTP-запуске — локальный bind. После разрешённо
 
 | Этап | Commit и удалённый ref | GitHub Actions |
 | --- | --- | --- |
-| 01 | `1a80825f0075fe0c28c0e7014d49871f6ce9b230`, `origin/develop` проверен через `git ls-remote` | [CI 40101385719](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40101385719), `completed / success` для этого SHA |
-| 02 | Публикация будет записана после проверки локального этапа и удалённого ref | `not_verified` до получения результата соответствующего запуска |
+| 01 | `1a80825f0075fe0c28c0e7014d49871f6ce9b230`, SHA подтверждён при публикации в `develop` | [CI 40101385719](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40101385719), `completed / success` для этого SHA |
+| 02 | `fc14d27364742c3dd14af988af3e101b1cb47070`, SHA `origin/develop` подтверждён через `git ls-remote` после push | [CI 40102234278](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40102234278), `completed / success` для этого SHA |
 
 Первый push выполнен до начала реализации этапа 02 по указанию пользователя.
 Наличие workflow, успешный push и результат удалённого CI проверяются отдельно.

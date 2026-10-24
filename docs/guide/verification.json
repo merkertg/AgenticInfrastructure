@@ -1,12 +1,14 @@
 {
   "schema_version": 2,
   "stage": "02",
-  "checked_at": "2026-10-24T19:22:03+05:00",
+  "checked_at": "2026-10-24T19:23:50+05:00",
   "scope": "Pure Python offline access policy and metadata-only audit values; HTTP liveness unchanged",
   "revision": {
     "branch": "develop",
     "base_commit": "1a80825f0075fe0c28c0e7014d49871f6ce9b230",
-    "state": "uncommitted_working_tree"
+    "code_commit": "fc14d27364742c3dd14af988af3e101b1cb47070",
+    "state": "published_code_commit",
+    "note": "Publication evidence recorded after the feature commit; subsequent documentation commits do not change application code."
   },
   "runtime": {
     "python": "3.12.15",
@@ -66,8 +68,7 @@
     },
     "whitespace": {
       "status": "passed",
-      "tracked_diff": true,
-      "untracked_files": 15
+      "scope": "tracked changes and all new files before the feature commit; publication documentation checked separately"
     },
     "function_documentation": {
       "status": "passed",
@@ -95,9 +96,16 @@
       }
     },
     "stage_02": {
-      "status": "pending",
-      "remote_ref": "not_verified",
-      "github_actions": "not_verified"
+      "status": "published",
+      "commit": "fc14d27364742c3dd14af988af3e101b1cb47070",
+      "branch": "develop",
+      "remote_ref": "verified",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40102234278,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40102234278"
+      }
     }
   },
   "previous_stages": {
