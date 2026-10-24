@@ -2,17 +2,21 @@
 
 [README](../../README.md) · [Quickstart](quickstart.md)
 
-The HTTP API still exposes one application operation:
+The HTTP API exposes liveness and two authenticated memory operations:
 
 | Method | Path | Result |
 | --- | --- | --- |
 | GET | `/health` | `200`, `{"status":"ok","service":"agentic-infrastructure"}` with default settings |
+| GET | `/memory/projects/{project_id}/documents/{document_id}/versions/{version_id}` | Authorized version, bearer credential required |
+| POST | `/memory/projects/{project_id}/documents/{document_id}/versions` | Append the next version, bearer credential and `Idempotency-Key` required |
 
-This is liveness only: the current HTTP application can answer a request.
-It performs no database, identity, connector, memory, authorization or LLM probe.
-It does not record an audit event. The policy and PostgreSQL adapter are separate
-code and are not called by the health handler. The health service does not need
-`DATABASE_URL` to start.
+`/health` is liveness only: the current HTTP application can answer a request.
+It performs no database, identity, connector, memory, authorization or LLM probe
+and records no audit event. It works without `APP_DATABASE_URL`.
+
+Memory routes derive the actor from the server-stored credential, never from
+request fields or headers. See [memory API usage](memory-api.md) for lab
+credentials, status codes and limits.
 
 `POST /health` returns `405`. `/`, `/memory` and `/agents` return `404`.
 `/docs`, `/redoc` and `/openapi.json` provide generated API documentation.
@@ -22,6 +26,7 @@ code and are not called by the health handler. The health service does not need
 | `APP_NAME` | `agentic-infrastructure` | Service title and health response name; whitespace is trimmed and empty names are rejected |
 | `APP_ENV` | `development` | Validated label: `development`, `test` or `production` |
 | `APP_DEBUG` | `false` | Explicit local traceback/debug option |
+| `APP_DATABASE_URL` | unset | PostgreSQL URL for memory routes; secret in settings output; memory routes return `503` when unset |
 
 Configuration precedence: explicit `Settings(...)` values, process environment,
 local `.env`, defaults. Settings are cached by `get_settings()` for the process.
@@ -29,8 +34,9 @@ Restart the server after changes. `create_app(settings)` allows tests to inject 
 separate configuration. `APP_ENV` does not change permissions or install an
 identity provider; leave debug disabled when handling any sensitive information.
 
-The [roadmap](../ROADMAP.md) describes future shared-memory behavior. No current
-HTTP request can read or write corporate context.
+The [roadmap](../ROADMAP.md) describes future shared-memory behavior. HTTP
+memory access currently covers stored versions of fictional lab documents only;
+no search, document intake or corporate source exists.
 
 For the Stage 02 access-policy demonstration, run from the repository root:
 
@@ -56,6 +62,7 @@ uv run --locked python -m app.persistence_demo
 Use `--setup` once in a new database ending in `_lab`; rerun the demo without it
 to use preserved data. The trusted Python path can read a permitted stored
 version and append another
-version with audit and write-replay records in one transaction. It still does
-not authenticate supplied employee IDs or expose memory through HTTP. See
+version with audit and write-replay records in one transaction. That trusted
+path does not authenticate supplied employee IDs; the Stage 04 HTTP routes use
+the same store with a verified credential. See
 [persistence usage](persistence.md) and the [Stage 03 guide](../STAGE_03.md).

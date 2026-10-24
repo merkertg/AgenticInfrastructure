@@ -33,6 +33,8 @@ class ReasonCode(StrEnum):
     VERSION_UNAVAILABLE = "version_unavailable"
     VERSION_MISMATCH = "version_mismatch"
     EMPLOYEE_PERMISSION_MISSING = "employee_permission_missing"
+    # Set by the persistence adapter when the authenticated credential lapsed.
+    CREDENTIAL_UNAVAILABLE = "credential_unavailable"
 
 
 def _validate_id(value: str, name: str) -> None:

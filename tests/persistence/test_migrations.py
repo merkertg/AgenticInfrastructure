@@ -16,6 +16,7 @@ EXPECTED_TABLES = {
     "projects",
     "employees",
     "agents",
+    "agent_credentials",
     "delegations",
     "documents",
     "versions",
@@ -55,3 +56,32 @@ def test_downgrade_then_upgrade_reconstructs_schema(
     finally:
         migrate(postgres_url)
     assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES
+
+
+def test_credential_revision_downgrades_to_initial_schema(
+    engine: Engine, postgres_url: str
+) -> None:
+    """Reverting Stage 04 removes credentials and the audit credential column only."""
+    configuration = Config(str(ROOT / "alembic.ini"))
+    configuration.set_main_option("script_location", str(ROOT / "migrations"))
+    try:
+        with engine.begin() as connection:
+            configuration.attributes["connection"] = connection
+            command.downgrade(configuration, "0001_initial")
+        inspector = inspect(engine)
+        assert set(inspector.get_table_names()) == EXPECTED_TABLES - {
+            "agent_credentials"
+        }
+        audit_columns = {
+            column["name"] for column in inspector.get_columns("audit_events")
+        }
+        assert "credential_id" not in audit_columns
+    finally:
+        migrate(postgres_url)
+    with engine.connect() as connection:
+        revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
+    assert revision == "0002_agent_credentials"
+    audit_columns = {
+        column["name"] for column in inspect(engine).get_columns("audit_events")
+    }
+    assert "credential_id" in audit_columns

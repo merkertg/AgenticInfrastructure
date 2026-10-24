@@ -26,9 +26,11 @@ from app.domain.models import (
     Employee,
     Grant,
     Project,
+    ReasonCode,
 )
 from app.domain.policy import evaluate_access
 from app.persistence import schema as db
+from app.persistence.credentials import credential_is_current
 
 
 def _row(
@@ -53,7 +55,12 @@ def _actions(row: RowMapping) -> dict[str, Any]:
     return values
 
 
-def _check_call(request: AccessRequest, action: Action, occurred_at: datetime) -> None:
+def _check_call(
+    request: AccessRequest,
+    action: Action,
+    occurred_at: datetime,
+    credential_id: str | None,
+) -> None:
     """Reject malformed operation calls before opening a database transaction."""
     if not isinstance(request, AccessRequest):
         raise TypeError("request must be an AccessRequest")
@@ -63,10 +70,12 @@ def _check_call(request: AccessRequest, action: Action, occurred_at: datetime) -
         raise TypeError("occurred_at must be a datetime")
     if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
         raise ValueError("occurred_at must be timezone-aware")
+    if credential_id is not None and not isinstance(credential_id, str):
+        raise TypeError("credential_id must be a string or None")
 
 
 class MemoryStore:
-    """Serve trusted Python callers; supplied actor IDs are not authentication."""
+    """Serve trusted callers; actor IDs are verified only via a rechecked credential."""
 
     def __init__(self, engine: Engine) -> None:
         """Use an explicit engine without connecting or importing web settings."""
@@ -84,7 +93,11 @@ class MemoryStore:
                 yield connection
 
     def _decision(
-        self, connection: Connection, request: AccessRequest
+        self,
+        connection: Connection,
+        request: AccessRequest,
+        credential_id: str | None,
+        occurred_at: datetime,
     ) -> tuple[AccessDecision, DocumentVersion | None]:
         """Lock the company and evaluate current database records before any replay."""
         company_row = (
@@ -96,6 +109,18 @@ class MemoryStore:
             .mappings()
             .one_or_none()
         )
+        # A revocation committed after HTTP authentication is visible under the lock.
+        if credential_id is not None and not credential_is_current(
+            connection, request, credential_id, occurred_at
+        ):
+            return (
+                AccessDecision(
+                    request=request,
+                    allowed=False,
+                    reason=ReasonCode.CREDENTIAL_UNAVAILABLE,
+                ),
+                None,
+            )
         project_row = _row(
             connection, db.projects, request.company_id, request.project_id
         )
@@ -157,9 +182,13 @@ class MemoryStore:
         return decision, version
 
     def _audit(
-        self, connection: Connection, result: MemoryResult, occurred_at: datetime
+        self,
+        connection: Connection,
+        result: MemoryResult,
+        occurred_at: datetime,
+        credential_id: str | None,
     ) -> None:
-        """Persist attempt and result metadata without document content."""
+        """Persist attempt, credential and result metadata without document content."""
         event = make_audit_event(result.decision, occurred_at=occurred_at)
         connection.execute(
             insert(db.audit_events).values(
@@ -172,16 +201,23 @@ class MemoryStore:
                 result_version_id=result.version_id,
                 result_version_number=result.version_number,
                 replayed=result.replayed,
+                credential_id=credential_id,
             )
         )
 
     def read_version(
-        self, request: AccessRequest, *, occurred_at: datetime
+        self,
+        request: AccessRequest,
+        *,
+        occurred_at: datetime,
+        credential_id: str | None = None,
     ) -> MemoryResult:
         """Return an authorized version only after its required audit commits."""
-        _check_call(request, Action.READ, occurred_at)
+        _check_call(request, Action.READ, occurred_at, credential_id)
         with self._transaction() as connection:
-            decision, version = self._decision(connection, request)
+            decision, version = self._decision(
+                connection, request, credential_id, occurred_at
+            )
             if decision.allowed:
                 assert version is not None
                 result = MemoryResult(
@@ -193,7 +229,7 @@ class MemoryStore:
                 )
             else:
                 result = MemoryResult(decision=decision, outcome=MemoryOutcome.DENIED)
-            self._audit(connection, result, occurred_at)
+            self._audit(connection, result, occurred_at, credential_id)
         return result
 
     def write_version(
@@ -203,9 +239,10 @@ class MemoryStore:
         new_version: DocumentVersion,
         expected_number: int,
         occurred_at: datetime,
+        credential_id: str | None = None,
     ) -> MemoryResult:
         """Append one version and atomically save its audit and idempotency record."""
-        _check_call(request, Action.WRITE, occurred_at)
+        _check_call(request, Action.WRITE, occurred_at, credential_id)
         if not isinstance(new_version, DocumentVersion):
             raise TypeError("new_version must be a DocumentVersion")
         if type(expected_number) is not int or not 1 <= expected_number < 1_000_000:
@@ -230,7 +267,9 @@ class MemoryStore:
         )
         fingerprint = hashlib.sha256(payload.encode("utf-8")).hexdigest()
         with self._transaction() as connection:
-            decision, base_version = self._decision(connection, request)
+            decision, base_version = self._decision(
+                connection, request, credential_id, occurred_at
+            )
             result = self._write(
                 connection,
                 decision,
@@ -239,7 +278,7 @@ class MemoryStore:
                 expected_number,
                 fingerprint,
             )
-            self._audit(connection, result, occurred_at)
+            self._audit(connection, result, occurred_at, credential_id)
         return result
 
     def _write(

@@ -34,7 +34,9 @@ Open [Swagger UI](http://127.0.0.1:8005/docs),
 Swagger UI and ReDoc load browser assets from a CDN; their HTML endpoints can
 respond even when the browser cannot load those assets offline.
 
-The root `/`, `/memory` and `/agents` return `404`. Only `/health` is implemented.
+The root `/`, `/memory` and `/agents` return `404`. Memory routes under
+`/memory/projects/...` need a lab database and a bearer credential; without
+`APP_DATABASE_URL` they return `503`. See [memory API usage](memory-api.md).
 Stop the server with `Ctrl+C`.
 
 If uv cannot write to its cache, use a writable cache directory for the command:

@@ -9,19 +9,19 @@ The project implements the **shared memory** alternative of the
 `#AgenticInfrastructure` assignment. Agent discovery, task exchange and a general
 corporate automation platform are outside the current roadmap.
 
-**Current implementation: Stages 01–03 — API foundation, access policy and
-PostgreSQL persistence.** The HTTP service still exposes only `GET /health`
-and generated documentation. The pure Python domain models companies,
-employees, delegated agents, documents, versions and grants. A separate storage
-adapter reads existing versions, appends new versions and commits operation
-audit metadata and write-replay records transactionally. Actual check results
-and publication state belong to [verification](docs/VERIFICATION.md).
+**Current implementation: Stages 01–04 — API foundation, access policy,
+PostgreSQL persistence and authenticated memory routes.** The pure Python domain
+models companies, employees, delegated agents, documents, versions and grants.
+The storage adapter reads existing versions, appends new versions and commits
+operation audit metadata and write-replay records transactionally. Agents call
+two HTTP memory routes with server-issued bearer credentials; the server derives
+the employee from the agent registration, never from request fields. Actual
+check results and publication state belong to [verification](docs/VERIFICATION.md).
 
-Persistence operations currently use a trusted Python caller and fictional
-laboratory data. Authenticated identity, an authorized memory HTTP API, search,
-agent tools and corporate connectors are **planned**. The health service and
-offline policy demo need no database; the persistence demo and integration tests
-need PostgreSQL. No model provider or corporate credentials are required.
+All data is fictional laboratory data. Search, document intake, agent tools and
+corporate connectors are **planned**. The health service and offline policy demo
+need no database; memory routes, the persistence demo and integration tests need
+PostgreSQL. No model provider or corporate credentials are required.
 
 ## Quickstart
 
@@ -49,7 +49,7 @@ Open [Swagger UI](http://127.0.0.1:8005/docs),
 [ReDoc](http://127.0.0.1:8005/redoc) or
 [OpenAPI JSON](http://127.0.0.1:8005/openapi.json). `/health` confirms that this
 application can respond. It does not check memory availability, authorization or
-audit durability. The root path `/` and future business routes return `404`.
+audit durability. The root path `/`, `/memory` and `/agents` return `404`.
 
 Optional settings come from the process environment or a local `.env` based on
 [.env.example](.env.example). Defaults are sufficient to start:
@@ -59,6 +59,7 @@ Optional settings come from the process environment or a local `.env` based on
 | `APP_NAME` | `agentic-infrastructure` | Nonempty service name; surrounding whitespace is removed |
 | `APP_ENV` | `development` | One of `development`, `test`, `production` |
 | `APP_DEBUG` | `false` | FastAPI debug mode; keep disabled for normal use |
+| `APP_DATABASE_URL` | unset | PostgreSQL URL for memory routes; they return `503` when unset |
 
 Explicit `Settings(...)` values take priority over environment variables, then
 `.env`, then defaults. Restart the process after changing configuration.
@@ -103,11 +104,36 @@ not document content.
 
 Run `--setup` once in a new local database ending in `_lab`; it creates fictional
 starting records and rejects an already populated company set. Further demo runs
-use the saved data and replay the same write. The lab's actor IDs are still
-metadata, not authenticated identity. No memory
-route is added to FastAPI. See [persistence instructions](docs/instructions/persistence.md)
+use the saved data and replay the same write. The demo's actor IDs are trusted
+Python input, not authenticated identity. See
+[persistence instructions](docs/instructions/persistence.md)
 and the [detailed Stage 03 guide](docs/STAGE_03.md) for database setup, test safety,
 transaction boundaries and current limitations.
+
+## Authenticated memory API
+
+Issue fictional lab credentials and start the API with an explicit database URL:
+
+```bash
+uv run --locked python -m app.credential_lab fin-agent
+export FIN_TOKEN='aik1_...'  # the token printed by the previous command
+export APP_DATABASE_URL="$DATABASE_URL"
+uv run --locked uvicorn app.main:app --host 127.0.0.1 --port 8005
+curl -H "Authorization: Bearer $FIN_TOKEN" \
+  http://127.0.0.1:8005/memory/projects/finance/documents/policy/versions/policy-v1
+```
+
+The token is printed once; PostgreSQL stores only its SHA-256 digest. `GET`
+returns an authorized version with `Cache-Control: no-store`. `POST
+/memory/projects/{project_id}/documents/{document_id}/versions` with an
+`Idempotency-Key` appends the next version; the server chooses its ID and
+`agent:<agent_id>` provenance. Every credential failure returns the same `401`;
+every authorization denial returns the same `404`, so another company's document
+looks like a missing one. Audit or storage failure returns `503` without content.
+The store rechecks the credential under the company lock before acting. See the
+[memory API instructions](docs/instructions/memory-api.md) and the
+[detailed Stage 04 guide](docs/STAGE_04.md). This is a learning credential
+scheme, not corporate SSO; bearer tokens need TLS outside loopback.
 
 ## Verify
 
@@ -142,14 +168,15 @@ including revoked grants, and cite the document versions it used.
 
 Stage 02 checks policy on immutable in-memory objects. Stage 03 loads stored
 policy objects and preserves version appends and audit history in PostgreSQL.
-Search, source synchronization and authenticated HTTP handling remain future
-stages.
+Stage 04 lets authenticated agents read and append versions over HTTP. Search,
+context assembly and source synchronization remain future stages.
 
 ## Documentation
 
 - [Detailed Stage 01 guide in Russian](docs/STAGE_01.md)
 - [Detailed Stage 02 guide in Russian](docs/STAGE_02.md)
 - [Detailed Stage 03 guide in Russian](docs/STAGE_03.md)
+- [Detailed Stage 04 guide in Russian](docs/STAGE_04.md)
 - [Roadmap and completion criteria in Russian](docs/ROADMAP.md)
 - [Approach and boundaries](docs/APPROACH.md)
 - [Quickstart](docs/instructions/quickstart.md), [API usage](docs/instructions/usage.md),
@@ -159,6 +186,8 @@ stages.
 - [Domain policy decision](docs/adr/0002-domain-memory-access-policy.md)
 - [Persistence instructions](docs/instructions/persistence.md) and
   [transaction decision](docs/adr/0003-postgresql-memory-audit.md)
+- [Memory API instructions](docs/instructions/memory-api.md) and
+  [credential decision](docs/adr/0004-agent-credentials-memory-api.md)
 - [Development log](docs/DEVELOPMENT_LOG.md) and [verification](docs/VERIFICATION.md)
 - [Learning guide index](docs/guide/README.md)
 

@@ -17,7 +17,8 @@ git diff --check
 
 Tests cover settings defaults, `.env` and environment precedence, validation,
 caching, independent application factories, the health JSON contract, OpenAPI,
-documentation endpoints and absent business routes. Domain tests also cover
+documentation endpoints, absent routes, bearer challenge responses, token shape,
+memory request bodies and lab credential guards. Domain tests also cover
 model validation and immutability, allowed and denied policy decisions, action
 separation, cross-company/project relationships, revoked grants/delegation and
 audit-attempt metadata with an explicit timestamp. Each test runs in a temporary
@@ -45,10 +46,14 @@ database name ending in `_test` before resetting tables. It does not fall back t
 `DATABASE_URL`. Missing `TEST_DATABASE_URL` skips these tests in ordinary runs;
 a configured but unavailable database fails. The tests exercise real migrations,
 stored versions, company/project constraints, write replay, conflicts, concurrent
-requests and rollback on audit failure. The [persistence guide](persistence.md)
-describes local setup.
+requests and rollback on audit failure. They also issue hashed credentials and
+call the memory HTTP routes through `TestClient` on the same database: invalid,
+revoked and expired credentials, spoofed identity headers and body fields,
+other companies and projects, revoked delegation, exceeded rights, write replay
+and conflicts, audit failure and revocation between authentication and the
+locked operation. The [persistence guide](persistence.md) describes local setup.
 
-Neither suite establishes authenticated identity over HTTP, retrieval quality,
+Neither suite establishes production identity integration, retrieval quality,
 corporate source behavior or LLM behavior. A process reconnection and a real
 database-server restart are different checks; the verification report states
 which was actually performed.
@@ -56,7 +61,8 @@ which was actually performed.
 For an actual HTTP smoke check, start the development server from
 [quickstart](quickstart.md). Expect `200` for `/health`, `/docs`, `/redoc` and
 `/openapi.json`; expect `404` for `/`, `/memory` and `/agents`, and `405` for
-`POST /health`. A restricted runtime may block local sockets independently of
+`POST /health`. For memory routes, follow [memory API usage](memory-api.md)
+with a lab database and issued credentials. A restricted runtime may block local sockets independently of
 application behavior; record that restriction instead of reporting a successful
 network smoke check.
 

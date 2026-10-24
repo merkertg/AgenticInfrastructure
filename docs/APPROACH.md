@@ -15,7 +15,7 @@ to specific document versions. It will state when no authorized evidence exists.
 Agents share the service while retaining the access boundaries of the employees
 who delegated to them. Agent discovery and task exchange are outside this build.
 
-## Implemented foundation, domain and persistence
+## Implemented foundation, domain, persistence and memory API
 
 Stage 01 contains a small FastAPI application:
 
@@ -31,7 +31,7 @@ applications. `app/main.py` owns the factory, response contract and health handl
 The default response contains `status: "ok"` and
 `service: "agentic-infrastructure"`.
 
-`GET /health` is liveness only. No business endpoint is exposed. Tests use
+`GET /health` is liveness only and never probes the database. Tests use
 in-process clients and isolated settings. The `production` environment label does
 not add production deployment behavior.
 
@@ -78,8 +78,29 @@ history. Reads return an authorized stored version after audit commit. Writes
 append to an existing document and return version metadata. A write's version,
 audit row and idempotency row commit together. Current access is checked before
 an identical write retry may reuse an earlier result. Expected revision numbers
-detect stale changes. The HTTP application is not connected to these operations.
-See [ADR 0003](adr/0003-postgresql-memory-audit.md).
+detect stale changes. See [ADR 0003](adr/0003-postgresql-memory-audit.md).
+
+Stage 04 connects these operations to HTTP for authenticated agents:
+
+```text
+Authorization: Bearer token
+        ↓
+SHA-256 lookup in agent_credentials → Principal
+        ↓
+AccessRequest from Principal + path (no actor fields accepted)
+        ↓
+MemoryStore: company lock → credential recheck → policy → audit → commit
+        ↓
+200/201 with data, uniform 404 denial, 409 conflict or 503 failure
+```
+
+A credential is an opaque random token bound to one agent registration and its
+employee, with mandatory expiry and revocation. Only its digest is stored. The
+employee is derived from the server-side registration, so agents cannot select
+another employee or exceed that employee's grants intersected with their
+delegation. Unauthenticated requests receive one uniform `401` and are not
+business-audited. The server derives new version IDs and `agent:<id>`
+provenance. See [ADR 0004](adr/0004-agent-credentials-memory-api.md).
 
 ## Architecture and remaining stages
 
@@ -88,9 +109,9 @@ Grow a modular monolith as working behavior appears:
 | Layer | Responsibility | First stage |
 | --- | --- | --- |
 | Domain | Implemented offline objects, deterministic policy and audit-event model | 02 |
-| Application | Implemented result contract for trusted memory operations | 03 |
-| Persistence | Implemented PostgreSQL versions, grants, write replay and audit | 03 |
-| Identity and API | Verified actor identity, agent delegation and scoped memory operations | 04 |
+| Application | Implemented memory result contract and authenticated principal | 03–04 |
+| Persistence | Implemented PostgreSQL versions, grants, credentials, write replay and audit | 03–04 |
+| Identity and API | Implemented agent bearer credentials and scoped memory version routes | 04 |
 | Retrieval | Bounded ingestion, permission-filtered search and context provenance | 05 |
 | Agent tool | Bounded context reads through existing application operations | 06 |
 | Corporate adapter | One read-only source, permission synchronization and revocation | 07 |
@@ -105,12 +126,12 @@ future layers and unused dependencies are not added in advance.
 ## Identity and access boundaries
 
 The policy model remains independently testable on fictional objects. Stage 03
-loads current policy records from PostgreSQL, but caller-supplied actor IDs still
-do not authenticate an employee. Before memory operations are exposed over HTTP,
-the server must verify credentials and bind the resulting employee identity to
-a registered active agent in the same
-company and its valid delegation. An arbitrary request field or header cannot
-select a trusted employee identity.
+loads current policy records from PostgreSQL; its trusted Python callers supply
+actor IDs. Stage 04 HTTP routes verify a stored agent credential, derive the
+employee from that agent's registration and require the registration and its
+delegation to be active in the same company. An arbitrary request field or
+header cannot select a trusted employee identity. The employee is not yet
+authenticated interactively; corporate identity integration is future work.
 
 The offline effective permission is the intersection of the supplied employee
 rights, the agent's delegation scope and the requested company/project/action.
@@ -154,10 +175,10 @@ administration can bypass these application operations and is outside the agent
 contract. Future rights-management
 paths must coordinate changes with the transaction boundary.
 
-Planned business operations will carry a server-established actor and agent,
+HTTP operations carry a server-established actor, agent and credential ID,
 company/project scope, operation, target/version references, outcome, reason code,
-timestamp and request identifier. Audit records should contain the metadata needed
-to explain an action without copying credentials or full sensitive documents.
+server timestamp and request identifier. Audit rows contain the metadata needed
+to explain an action without copying tokens, digests or document text.
 
 These transaction guarantees currently apply to trusted version reads and
 appends. Future context retrieval must preserve them. Denied attempts and
@@ -194,8 +215,9 @@ unrestricted service calls and corporate writes are outside the initial connecto
 
 Current domain and persistence checks use fictional fixtures for permission
 boundaries, version conflicts, request replay and unavailable audit storage.
-Later stages must extend them to authenticated requests, source sync, retrieval
-and stale cache/index entries. Expected results must be independent of the
+Stage 04 adds authenticated HTTP requests with invalid, revoked and spoofed
+identity. Later stages must extend them to source sync, retrieval and stale
+cache/index entries. Expected results must be independent of the
 implementation. A database check is reported as verified only after an actual
 PostgreSQL run, separately from the unit suite.
 

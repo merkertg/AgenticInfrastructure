@@ -34,7 +34,11 @@
   Run `mypy app tests scripts migrations`; keep migrations and schema aligned.
 - Keep `MemoryStore` transactions at `READ COMMITTED` and hold the company row
   lock through policy, mutation/replay and audit commit. Recheck current access
-  before replay. Do not expose memory over HTTP before the identity stage.
+  before replay.
+- Memory HTTP routes take the actor only from a verified bearer credential and
+  pass its ID to `MemoryStore` for a recheck under the company lock. Keep
+  credential failures a uniform `401` and authorization denials a uniform `404`.
+  Never store, log or audit plain tokens.
 - Publish only locally verified changes when publication is authorized. Verify
   remote refs independently from CI. A workflow file or a successful push does
   not prove that GitHub Actions passed.

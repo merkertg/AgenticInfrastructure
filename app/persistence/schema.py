@@ -66,6 +66,26 @@ agents = Table(
     UniqueConstraint("company_id", "id", "employee_id", name="uq_agents_binding"),
 )
 
+agent_credentials = Table(
+    "agent_credentials",
+    metadata,
+    Column("company_id", String(128), ForeignKey("companies.id"), primary_key=True),
+    Column("id", String(128), primary_key=True),
+    Column("agent_id", String(128), nullable=False),
+    Column("employee_id", String(128), nullable=False),
+    Column("token_hash", String(64), nullable=False),
+    Column("issued_at", DateTime(timezone=True), nullable=False),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    ForeignKeyConstraint(
+        ["company_id", "agent_id", "employee_id"],
+        ["agents.company_id", "agents.id", "agents.employee_id"],
+    ),
+    UniqueConstraint("token_hash", name="uq_agent_credentials_token_hash"),
+    CheckConstraint("token_hash ~ '^[a-f0-9]{64}$'", name="sha256_token_hash"),
+    CheckConstraint("expires_at > issued_at", name="positive_lifetime"),
+)
+
 delegations = Table(
     "delegations",
     metadata,
@@ -171,6 +191,8 @@ audit_events = Table(
     Column("result_version_id", String(128), nullable=True),
     Column("result_version_number", Integer, nullable=True),
     Column("replayed", Boolean, nullable=False, server_default=text("false")),
+    # Trusted Python callers have no credential; HTTP calls record the one used.
+    Column("credential_id", String(128), nullable=True),
     CheckConstraint("action IN ('read', 'write')", name="supported_action"),
     CheckConstraint("allowed = (reason = 'allowed')", name="consistent_authorization"),
     CheckConstraint(

@@ -62,7 +62,8 @@ def engine(pg_engine: Engine) -> Iterator[Engine]:
         connection.execute(
             text(
                 "TRUNCATE write_requests, audit_events, grants, versions, documents, "
-                "delegations, agents, employees, projects, companies CASCADE"
+                "delegations, agent_credentials, agents, employees, projects, "
+                "companies CASCADE"
             )
         )
     yield pg_engine

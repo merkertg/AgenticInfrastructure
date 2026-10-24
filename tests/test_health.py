@@ -23,7 +23,7 @@ def test_health_rejects_post(client: TestClient) -> None:
 
 @pytest.mark.parametrize("path", ["/", "/memory", "/agents"])
 def test_unimplemented_route_returns_404(client: TestClient, path: str) -> None:
-    """Future memory and agent APIs are not exposed by the foundation stage."""
+    """Agent discovery and the bare memory prefix are not exposed as routes."""
     assert client.get(path).status_code == 404
 
 
@@ -34,7 +34,11 @@ def test_openapi_describes_health_contract(client: TestClient) -> None:
     schema = response.json()
     assert schema["info"]["title"] == "agentic-infrastructure"
     assert schema["info"]["version"] == __version__ == "0.1.0"
-    assert set(schema["paths"]) == {"/health"}
+    assert set(schema["paths"]) == {
+        "/health",
+        "/memory/projects/{project_id}/documents/{document_id}/versions",
+        "/memory/projects/{project_id}/documents/{document_id}/versions/{version_id}",
+    }
     response_schema = schema["paths"]["/health"]["get"]["responses"]["200"]["content"][
         "application/json"
     ]["schema"]

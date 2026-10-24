@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import StringConstraints
+from pydantic import SecretStr, StringConstraints
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = "development"
     # Tracebacks are disabled unless a developer explicitly opts in locally.
     app_debug: bool = False
+    # Memory routes stay unavailable until a PostgreSQL URL is set explicitly.
+    app_database_url: SecretStr | None = None
 
 
 @lru_cache

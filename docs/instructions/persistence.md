@@ -4,8 +4,10 @@
 
 Stage 03 provides trusted Python operations to read an existing version or append
 a new version to an existing document. It loads current policy objects from
-PostgreSQL and persists audit metadata. The HTTP API still exposes only health;
-caller-supplied actor IDs are not authenticated identities.
+PostgreSQL and persists audit metadata. Caller-supplied actor IDs are not
+authenticated identities on this path. Stage 04 adds hashed agent credentials
+(migration `0002_agent_credentials`) and HTTP routes that pass a verified
+credential to the same store; see [memory API usage](memory-api.md).
 
 ## Connect and migrate
 
@@ -43,6 +45,9 @@ setup and explains the demo's fictional bootstrap.
   success. Every valid attempt reaching the policy check gets a new audit row
   when audit storage is available. Malformed operation arguments are rejected
   before a transaction and are not business-audit rows.
+- An optional `credential_id` (passed by the HTTP routes) is rechecked after the
+  company lock: an inactive, expired or mismatched credential denies with
+  `credential_unavailable`, and the audit row records the credential ID.
 
 The current adapter locks the company row during operations. It also reports
 stale expected revisions and version-identity collisions as conflicts. This
