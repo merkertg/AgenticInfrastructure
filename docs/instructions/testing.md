@@ -17,12 +17,24 @@ git diff --check
 
 Tests cover settings defaults, `.env` and environment precedence, validation,
 caching, independent application factories, the health JSON contract, OpenAPI,
-documentation endpoints and absent business routes. Each test runs in a temporary
+documentation endpoints and absent business routes. Domain tests also cover
+model validation and immutability, allowed and denied policy decisions, action
+separation, cross-company/project relationships, revoked grants/delegation and
+audit-attempt metadata with an explicit timestamp. Each test runs in a temporary
 directory with `APP_*` environment variables removed and the settings cache reset.
-The test client calls the ASGI application directly without a listening socket.
+The HTTP test client calls the ASGI application directly without a socket.
 
-These checks do not demonstrate tenant isolation, authorization, durable audit,
+Run only the domain tests or the deterministic demo with:
+
+```bash
+uv run --locked pytest tests/domain
+uv run --locked python -m app.demo
+```
+
+These checks exercise offline policy on supplied objects. They do not establish
+authenticated tenant isolation over HTTP, trusted identity, durable audit,
 retrieval quality, database behavior or LLM behavior. These are future stages.
+The [domain instructions](domain.md) explain the current contract and limits.
 
 For an actual HTTP smoke check, start the development server from
 [quickstart](quickstart.md). Expect `200` for `/health`, `/docs`, `/redoc` and

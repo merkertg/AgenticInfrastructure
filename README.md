@@ -9,15 +9,17 @@ The project implements the **shared memory** alternative of the
 `#AgenticInfrastructure` assignment. Agent discovery, task exchange and a general
 corporate automation platform are outside the current roadmap.
 
-**Current implementation: Stage 01 — FastAPI foundation.** The service exposes
-`GET /health`, validated settings and generated API documentation. It includes
-isolated tests, Ruff, strict mypy, locked dependencies and a GitHub Actions
-configuration. Actual check results and publication state belong to
-[verification](docs/VERIFICATION.md).
+**Current implementation: Stages 01–02 — API foundation and offline access
+policy.** The HTTP service exposes `GET /health`, validated settings and generated
+API documentation. A separate pure Python domain models companies, employees,
+delegated agents, documents, versions and grants. It evaluates access requests
+and constructs audit-event metadata on fictional inputs. Actual check results
+and publication state belong to [verification](docs/VERIFICATION.md).
 
-Corporate memory, authentication, permissions, audit storage, document retrieval,
-agent tools and corporate connectors are **planned**. Stage 01 needs no database,
-model provider, corporate credentials or external service.
+Durable memory, authenticated identity, HTTP authorization, audit storage,
+document retrieval, agent tools and corporate connectors are **planned**. The
+current build needs no database, model provider, corporate credentials or
+external service.
 
 ## Quickstart
 
@@ -61,6 +63,23 @@ Explicit `Settings(...)` values take priority over environment variables, then
 `APP_ENV=production` is a validated label; it does not configure a production
 deployment or activate security features.
 
+## Offline domain demo
+
+```bash
+uv run --locked python -m app.demo
+```
+
+The deterministic demo evaluates fictional finance and engineering requests.
+Employee document rights and an active agent delegation must both permit the
+requested action in the same company and project. Missing or revoked access is
+denied, and `read` and `write` remain separate actions. The demo returns decisions
+and audit-attempt metadata; it does not return document content, change memory or
+persist history. It requires no server or `.env`.
+
+An `employee_id` in these offline inputs is metadata, not proof of identity.
+See the [domain instructions](docs/instructions/domain.md) and
+[detailed Stage 02 guide](docs/STAGE_02.md).
+
 ## Verify
 
 ```bash
@@ -84,18 +103,21 @@ cannot retrieve finance material. Agents of either employee must also be unable
 to read another company's content. A response must respect current permissions,
 including revoked grants, and cite the document versions it used.
 
-This scenario is an acceptance target for later stages. Stage 01 stores no
-documents and makes no authorization decision.
+Stage 02 checks the access-policy part of this scenario on immutable in-memory
+objects. Source retrieval, storage and authenticated request handling remain
+future stages.
 
 ## Documentation
 
 - [Detailed Stage 01 guide in Russian](docs/STAGE_01.md)
+- [Detailed Stage 02 guide in Russian](docs/STAGE_02.md)
 - [Roadmap and completion criteria in Russian](docs/ROADMAP.md)
 - [Approach and boundaries](docs/APPROACH.md)
 - [Quickstart](docs/instructions/quickstart.md), [API usage](docs/instructions/usage.md),
   [testing](docs/instructions/testing.md), [project structure](docs/instructions/project-structure.md)
 - [CI and publication](docs/CI_CD.md)
 - [Architecture decision](docs/adr/0001-shared-memory-and-staged-delivery.md)
+- [Domain policy decision](docs/adr/0002-domain-memory-access-policy.md)
 - [Development log](docs/DEVELOPMENT_LOG.md) and [verification](docs/VERIFICATION.md)
 - [Learning guide index](docs/guide/README.md)
 

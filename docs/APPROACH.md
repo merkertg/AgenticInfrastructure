@@ -15,7 +15,7 @@ to specific document versions. It will state when no authorized evidence exists.
 Agents share the service while retaining the access boundaries of the employees
 who delegated to them. Agent discovery and task exchange are outside this build.
 
-## Implemented foundation
+## Implemented foundation and offline domain
 
 Stage 01 contains a small FastAPI application:
 
@@ -31,10 +31,33 @@ applications. `app/main.py` owns the factory, response contract and health handl
 The default response contains `status: "ok"` and
 `service: "agentic-infrastructure"`.
 
-`GET /health` is liveness only. Memory, authentication, authorization, audit and
-retrieval do not exist yet. No business endpoint is exposed. Tests use in-process
-clients and isolated settings. The `production` environment label does not add
-production deployment behavior.
+`GET /health` is liveness only. No business endpoint is exposed. Tests use
+in-process clients and isolated settings. The `production` environment label does
+not add production deployment behavior.
+
+Stage 02 adds a pure Python domain independent of the web application:
+
+```text
+fictional immutable objects + AccessRequest
+                    ↓
+             evaluate_access()
+                    ↓
+        AccessDecision + supplied time
+                    ↓
+             make_audit_event()
+```
+
+The models cover companies, projects, employees, registered employee-bound
+agents, delegations, documents, versions and employee document grants. Models
+validate bounded values and use frozen dataclasses; permitted actions are
+immutable sets of explicit `read` and `write` enum values.
+
+The policy checks supplied scope and object relationships, then intersects the
+employee's document permission with the agent's project/action delegation.
+Absent, inactive or mismatched prerequisites deny access with an explicit reason.
+It does not fetch data, authenticate an employee, execute a read/write or save an
+audit record. The separate demo runs without web settings or external services.
+See [ADR 0002](adr/0002-domain-memory-access-policy.md).
 
 ## Planned architecture
 
@@ -42,8 +65,8 @@ Grow a modular monolith as working behavior appears:
 
 | Layer | Planned responsibility | First stage |
 | --- | --- | --- |
-| Domain | Companies, employees, delegated agents, document versions, grants and deterministic decisions | 02 |
-| Application | Memory operations, policy enforcement and audit requirements | 02–03 |
+| Domain | Implemented offline objects, deterministic policy and audit-event model | 02 |
+| Application | Persistent memory operations and audit requirements | 03 |
 | Persistence | Transactional document versions, grants, idempotency and audit | 03 |
 | Identity and API | Verified actor identity, agent delegation and scoped memory operations | 04 |
 | Retrieval | Bounded ingestion, permission-filtered search and context provenance | 05 |
@@ -51,7 +74,7 @@ Grow a modular monolith as working behavior appears:
 | Corporate adapter | One read-only source, permission synchronization and revocation | 07 |
 | Delivery | Containers, integration evaluations and operating instructions | 08 |
 
-Domain code will use ordinary Python types without FastAPI, database or model SDK
+Domain code uses ordinary Python types without FastAPI, database or model SDK
 imports. Storage adapters will implement explicit application contracts.
 PostgreSQL is planned for durable transactions. Search technology and a model
 provider will be selected when their stages have concrete requirements. Empty
@@ -59,14 +82,16 @@ future layers and unused dependencies are not added in advance.
 
 ## Identity and access boundaries
 
-The first policy model will be exercised offline with fictional actors and
-documents. Its actor identifiers are input metadata, not authentication. Before
+The policy model is exercised offline with fictional actors and documents.
+Its actor identifiers are input metadata, not authentication. Callers must supply
+the relevant current objects; the domain does not establish their trusted origin.
+Before
 memory operations are exposed over HTTP, the server must verify credentials and
 bind the resulting employee identity to a registered active agent in the same
 company and its valid delegation. An arbitrary request field or header cannot
 select a trusted employee identity.
 
-The intended effective permission is the intersection of the employee's current
+The offline effective permission is the intersection of the supplied employee
 rights, the agent's delegation scope and the requested company/project/action.
 Unspecified access is denied. Read and write grants are separate. Cross-company
 and cross-project identifiers must be checked by the server on every operation.
@@ -81,7 +106,14 @@ Revocation and document deletion must invalidate or exclude stale derived contex
 a cached success cannot authorize a later request. Cache keys and validation must
 isolate company, actor, agent and policy revision, rather than only query text.
 
-## History and source provenance
+## Audit model and planned durable history
+
+`make_audit_event()` creates an immutable description of an authorization attempt
+from its decision and a supplied timezone-aware timestamp normalized to UTC.
+It copies request identifiers, action, outcome and reason without document text.
+It reads no clock and performs no I/O. The event is not persisted and does not
+prove that a document was read, changed or delivered. In-memory `active` flags
+and new snapshots represent revocation in Stage 02; there is no live grant store.
 
 Planned business operations will carry a server-established actor and agent,
 company/project scope, operation, target/version references, outcome, reason code,
@@ -129,7 +161,8 @@ must be independent of the implementation and run on fictional fixtures.
 This is a learning build. Production readiness would require verified identity
 integration, transport security, secret management, deployment hardening,
 operational monitoring, recovery exercises and a review of the organization's
-actual data policy. None is established by Stage 01 or by a successful `/health`.
+actual data policy. None is established by an offline access decision or by a
+successful `/health`.
 
 ## Learning and delivery
 
