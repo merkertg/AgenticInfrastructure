@@ -6,7 +6,9 @@
   "revision": {
     "branch": "develop",
     "base_commit": "c9485a106a2feb4070f2640c5f387c9fe94c0db4",
-    "state": "verified_working_tree_before_commit"
+    "code_commit": "955aec742d48d741a2a4962b674790e4924abd6e",
+    "state": "published_code_commit",
+    "note": "Local checks ran on the working tree that became the code commit; publication evidence is recorded in a later documentation commit without application changes."
   },
   "runtime": {
     "python": "3.12.15",
@@ -181,9 +183,18 @@
       }
     },
     "stage_03": {
-      "status": "not_published_at_local_check",
-      "remote_ref": "not_verified",
-      "github_actions": "not_verified"
+      "status": "published",
+      "commit": "955aec742d48d741a2a4962b674790e4924abd6e",
+      "branch": "develop",
+      "remote_ref": "verified",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40104677151,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40104677151",
+        "postgres_step": "success",
+        "test_counts_in_ci_log": "not_verified"
+      }
     }
   },
   "previous_stages": {
