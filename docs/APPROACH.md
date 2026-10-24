@@ -15,7 +15,7 @@ to specific document versions. It will state when no authorized evidence exists.
 Agents share the service while retaining the access boundaries of the employees
 who delegated to them. Agent discovery and task exchange are outside this build.
 
-## Implemented foundation and offline domain
+## Implemented foundation, domain and persistence
 
 Stage 01 contains a small FastAPI application:
 
@@ -59,15 +59,37 @@ It does not fetch data, authenticate an employee, execute a read/write or save a
 audit record. The separate demo runs without web settings or external services.
 See [ADR 0002](adr/0002-domain-memory-access-policy.md).
 
-## Planned architecture
+Stage 03 adds PostgreSQL persistence through a separate trusted Python caller:
+
+```text
+AccessRequest + optional new revision
+                  ↓
+      transaction + company row lock
+                  ↓
+ stored policy objects → evaluate_access()
+                  ↓
+ version read/append + audit + write replay record
+                  ↓
+         commit → MemoryResult
+```
+
+SQLAlchemy Core and psycopg implement the adapter; Alembic defines schema
+history. Reads return an authorized stored version after audit commit. Writes
+append to an existing document and return version metadata. A write's version,
+audit row and idempotency row commit together. Current access is checked before
+an identical write retry may reuse an earlier result. Expected revision numbers
+detect stale changes. The HTTP application is not connected to these operations.
+See [ADR 0003](adr/0003-postgresql-memory-audit.md).
+
+## Architecture and remaining stages
 
 Grow a modular monolith as working behavior appears:
 
-| Layer | Planned responsibility | First stage |
+| Layer | Responsibility | First stage |
 | --- | --- | --- |
 | Domain | Implemented offline objects, deterministic policy and audit-event model | 02 |
-| Application | Persistent memory operations and audit requirements | 03 |
-| Persistence | Transactional document versions, grants, idempotency and audit | 03 |
+| Application | Implemented result contract for trusted memory operations | 03 |
+| Persistence | Implemented PostgreSQL versions, grants, write replay and audit | 03 |
 | Identity and API | Verified actor identity, agent delegation and scoped memory operations | 04 |
 | Retrieval | Bounded ingestion, permission-filtered search and context provenance | 05 |
 | Agent tool | Bounded context reads through existing application operations | 06 |
@@ -75,19 +97,18 @@ Grow a modular monolith as working behavior appears:
 | Delivery | Containers, integration evaluations and operating instructions | 08 |
 
 Domain code uses ordinary Python types without FastAPI, database or model SDK
-imports. Storage adapters will implement explicit application contracts.
-PostgreSQL is planned for durable transactions. Search technology and a model
+imports. The PostgreSQL adapter implements explicit memory-operation results.
+Search technology and a model
 provider will be selected when their stages have concrete requirements. Empty
 future layers and unused dependencies are not added in advance.
 
 ## Identity and access boundaries
 
-The policy model is exercised offline with fictional actors and documents.
-Its actor identifiers are input metadata, not authentication. Callers must supply
-the relevant current objects; the domain does not establish their trusted origin.
-Before
-memory operations are exposed over HTTP, the server must verify credentials and
-bind the resulting employee identity to a registered active agent in the same
+The policy model remains independently testable on fictional objects. Stage 03
+loads current policy records from PostgreSQL, but caller-supplied actor IDs still
+do not authenticate an employee. Before memory operations are exposed over HTTP,
+the server must verify credentials and bind the resulting employee identity to
+a registered active agent in the same
 company and its valid delegation. An arbitrary request field or header cannot
 select a trusted employee identity.
 
@@ -106,28 +127,47 @@ Revocation and document deletion must invalidate or exclude stale derived contex
 a cached success cannot authorize a later request. Cache keys and validation must
 isolate company, actor, agent and policy revision, rather than only query text.
 
-## Audit model and planned durable history
+## Audit model and durable operation history
 
 `make_audit_event()` creates an immutable description of an authorization attempt
 from its decision and a supplied timezone-aware timestamp normalized to UTC.
 It copies request identifiers, action, outcome and reason without document text.
 It reads no clock and performs no I/O. The event is not persisted and does not
 prove that a document was read, changed or delivered. In-memory `active` flags
-and new snapshots represent revocation in Stage 02; there is no live grant store.
+and new snapshots represent revocation in the offline Stage 02 example.
+
+The Stage 03 adapter loads stored grants on each operation. Its audit table also
+records the memory-operation result, resulting version metadata and whether a
+write was replayed. An authorized request can still produce a version or
+idempotency conflict. Audit rows have no actor/target foreign keys because
+denials for missing objects must remain recordable. No document body or source
+text is copied into audit or idempotency payloads.
+
+The adapter appends a new version, audit and write-replay record in one
+transaction. It commits mandatory audit before returning read content. Audit
+or commit failure prevents a successful result; write changes roll back. It
+serializes current operations by locking the company row and also checks the
+expected version number. The adapter explicitly uses `READ COMMITTED`, including
+for externally supplied engines, so statements after a lock wait see the prior
+operation's committed version and replay record. Direct privileged SQL
+administration can bypass these application operations and is outside the agent
+contract. Future rights-management
+paths must coordinate changes with the transaction boundary.
 
 Planned business operations will carry a server-established actor and agent,
 company/project scope, operation, target/version references, outcome, reason code,
 timestamp and request identifier. Audit records should contain the metadata needed
 to explain an action without copying credentials or full sensitive documents.
 
-Successful mutations and their audit record must commit in one transaction.
-Denied attempts and authorized context-read attempts also need durable history.
+These transaction guarantees currently apply to trusted version reads and
+appends. Future context retrieval must preserve them. Denied attempts and
+authorized context-read attempts also need durable history.
 A read record does not prove that the client received the response. If required
 audit recording is unavailable, business data must not be returned and mutations
 must fail closed; that outage may also prevent a durable denial record. The
 liveness endpoint still describes whether the HTTP service can respond. The
-exact failure and recovery contracts will be defined and tested in the
-persistence stage.
+current failure behavior is exercised with PostgreSQL integration tests;
+deployment recovery procedures belong to the delivery stage.
 Application audit records alone do not prove tamper resistance against database
 administrators; stronger retention and operational controls need separate work.
 
@@ -152,11 +192,12 @@ unrestricted service calls and corporate writes are outside the initial connecto
 
 ## Acceptance targets and limits
 
-Later stages must demonstrate allowed finance and engineering reads, denied
-cross-project and cross-company requests, forged actor fields, expired or revoked
-delegation, revoked document access, stale cache/index entries, unavailable audit
-storage, malformed input and instruction-like document text. Expected results
-must be independent of the implementation and run on fictional fixtures.
+Current domain and persistence checks use fictional fixtures for permission
+boundaries, version conflicts, request replay and unavailable audit storage.
+Later stages must extend them to authenticated requests, source sync, retrieval
+and stale cache/index entries. Expected results must be independent of the
+implementation. A database check is reported as verified only after an actual
+PostgreSQL run, separately from the unit suite.
 
 This is a learning build. Production readiness would require verified identity
 integration, transport security, secret management, deployment hardening,

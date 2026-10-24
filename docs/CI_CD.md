@@ -5,7 +5,11 @@
 The [workflow](../.github/workflows/ci.yml) runs on pushes to `main` and `develop`,
 pull requests targeting those branches, and manual dispatch. It installs Python
 3.12 and uv, synchronizes `uv.lock`, then checks lint, formatting, strict types,
-tests, local documentation links and whitespace.
+unit tests, local documentation links and whitespace. The PostgreSQL integration
+step uses a disposable PostgreSQL 17 service and an explicit local test URL. It
+applies and exercises the migration-backed persistence path, including version
+conflicts, request replay and audit rollback. The two suites are distinct:
+skipped database tests in a unit run do not establish PostgreSQL behavior.
 
 The workflow has read-only repository permissions and does not deploy a service,
 publish a package, build a container or access corporate credentials. Exact
@@ -14,6 +18,7 @@ The initial resolution uses a fixed two-week release cutoff of
 `2026-10-10T00:00:00Z`; this reduces immediate adoption of new releases and does
 not replace vulnerability review or a future dependency update policy.
 
-A configured workflow is not evidence of a successful remote run. Check the
+A configured PostgreSQL service or workflow is not evidence of a successful run.
+Check the
 actual commit and run conclusion before calling CI verified. Publication and
 GitHub Actions evidence are recorded separately in the verification report.

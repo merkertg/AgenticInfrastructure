@@ -26,8 +26,15 @@
 - Explain every new function's purpose. Update the guide, development log,
   verification report and `docs/guide/verification.json` with each stage.
 - Run pytest, Ruff lint and format checks, strict mypy, documentation link
-  checks and `git diff --check`. Tests must not rely on a developer's `.env`,
+  checks and `git diff --check`. Unit tests must not rely on a developer's `.env`,
   credentials or live external services.
+- Persistence changes also require actual PostgreSQL integration tests with an
+  explicit local `TEST_DATABASE_URL` ending in `_test` and no URL query options.
+  Never use a corporate or application database for tests that reset tables.
+  Run `mypy app tests scripts migrations`; keep migrations and schema aligned.
+- Keep `MemoryStore` transactions at `READ COMMITTED` and hold the company row
+  lock through policy, mutation/replay and audit commit. Recheck current access
+  before replay. Do not expose memory over HTTP before the identity stage.
 - Publish only locally verified changes when publication is authorized. Verify
   remote refs independently from CI. A workflow file or a successful push does
   not prove that GitHub Actions passed.

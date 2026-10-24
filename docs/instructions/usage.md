@@ -1,4 +1,4 @@
-# Current API and offline demo
+# Current API and memory demonstrations
 
 [README](../../README.md) · [Quickstart](quickstart.md)
 
@@ -10,8 +10,9 @@ The HTTP API still exposes one application operation:
 
 This is liveness only: the current HTTP application can answer a request.
 It performs no database, identity, connector, memory, authorization or LLM probe.
-It does not record an audit event. The Stage 02 policy and audit-event model are
-separate offline code and are not called by the health handler.
+It does not record an audit event. The policy and PostgreSQL adapter are separate
+code and are not called by the health handler. The health service does not need
+`DATABASE_URL` to start.
 
 `POST /health` returns `405`. `/`, `/memory` and `/agents` return `404`.
 `/docs`, `/redoc` and `/openapi.json` provide generated API documentation.
@@ -41,3 +42,20 @@ The demo evaluates fictional authorization attempts and constructs audit-event
 metadata in memory. It needs no server, environment settings, corporate data,
 database or model. It performs no content read/write or durable audit recording.
 See [domain usage](domain.md) and the [Russian guide](../STAGE_02.md).
+
+For the Stage 03 PostgreSQL laboratory, first create a separate local lab database
+and set its connection explicitly:
+
+```bash
+export DATABASE_URL='postgresql+psycopg://agentic@127.0.0.1:55435/agentic_lab'
+uv run --locked alembic upgrade head
+uv run --locked python -m app.persistence_demo --setup
+uv run --locked python -m app.persistence_demo
+```
+
+Use `--setup` once in a new database ending in `_lab`; rerun the demo without it
+to use preserved data. The trusted Python path can read a permitted stored
+version and append another
+version with audit and write-replay records in one transaction. It still does
+not authenticate supplied employee IDs or expose memory through HTTP. See
+[persistence usage](persistence.md) and the [Stage 03 guide](../STAGE_03.md).

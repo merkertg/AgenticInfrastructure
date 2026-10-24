@@ -1,14 +1,12 @@
 {
-  "schema_version": 2,
-  "stage": "02",
-  "checked_at": "2026-10-24T19:23:50+05:00",
-  "scope": "Pure Python offline access policy and metadata-only audit values; HTTP liveness unchanged",
+  "schema_version": 3,
+  "stage": "03",
+  "checked_at": "2026-10-24T19:58:00+05:00",
+  "scope": "PostgreSQL trusted Python reads and version appends with transactional audit and idempotency; no memory HTTP API",
   "revision": {
     "branch": "develop",
-    "base_commit": "1a80825f0075fe0c28c0e7014d49871f6ce9b230",
-    "code_commit": "fc14d27364742c3dd14af988af3e101b1cb47070",
-    "state": "published_code_commit",
-    "note": "Publication evidence recorded after the feature commit; subsequent documentation commits do not change application code."
+    "base_commit": "c9485a106a2feb4070f2640c5f387c9fe94c0db4",
+    "state": "verified_working_tree_before_commit"
   },
   "runtime": {
     "python": "3.12.15",
@@ -21,58 +19,133 @@
     "uvicorn": "0.54.0",
     "pytest": "9.1.1",
     "ruff": "0.16.10",
-    "mypy": "2.4.0"
+    "mypy": "2.4.0",
+    "sqlalchemy": "2.1.4",
+    "psycopg": "3.3.6",
+    "alembic": "1.20.0"
   },
   "lock": {
-    "sha256": "8fd22488361f992e6601c86e744d7cead32e3ab291b02de1a616cd6569058616",
+    "sha256": "0772eb6b83e5cc05e74f3709dfa2f3576c1e6df54ef9e61533a4cb47f3c1e635",
     "exclude_newer": "2026-10-10T00:00:00Z"
   },
   "checks": {
-    "sync_locked_offline": {
+    "sync_locked": {
       "status": "passed",
-      "installed_packages_checked": 30
+      "offline": true,
+      "installed_packages_checked": 36,
+      "new_packages_installed": 6
     },
     "pytest": {
       "status": "passed",
-      "tests_passed": 139,
-      "domain": 103,
-      "foundation": 34,
-      "demo": 2
+      "tests_passed": 191,
+      "without_postgres": {
+        "passed": 158,
+        "domain": 103,
+        "foundation": 34,
+        "demo": 2,
+        "persistence_url_guards": 19
+      },
+      "postgres": {
+        "passed": 33,
+        "memory_store": 24,
+        "constraints": 6,
+        "migrations": 3
+      },
+      "without_test_database_url": {
+        "passed": 158,
+        "skipped": 33,
+        "counts_as_postgres_check": false
+      },
+      "postgres_after_server_restart": {
+        "passed": 33
+      },
+      "concurrency_repeats": {
+        "runs": 3,
+        "passed_per_run": 3
+      },
+      "isolation_regression": "Supplied READ COMMITTED and REPEATABLE READ engines both run company-lock transactions at read committed."
     },
     "ruff_check": {
       "status": "passed"
     },
     "ruff_format": {
-      "status": "passed"
+      "status": "passed",
+      "files": 57
     },
     "mypy": {
       "status": "passed",
-      "source_files": 20
+      "source_files": 37,
+      "paths": [
+        "app",
+        "tests",
+        "scripts",
+        "migrations"
+      ]
     },
     "lock_offline": {
       "status": "passed",
-      "resolved_packages": 33,
-      "unchanged": true
+      "resolved_packages": 40
     },
-    "offline_demo": {
+    "migration": {
       "status": "passed",
-      "cases": 8,
-      "allowed": 1,
-      "denied": 7,
-      "deterministic": true
+      "revision": "0001_initial",
+      "application_tables": 10,
+      "repeated_upgrade": true,
+      "alembic_check": "No new upgrade operations detected.",
+      "downgrade_upgrade_test": true
+    },
+    "persistence_demo": {
+      "status": "passed",
+      "database": "fresh local agentic_final_lab after final code",
+      "cases": 7,
+      "outcomes": {
+        "read_v1": "read",
+        "append_v2": "written",
+        "retry_v2": "written",
+        "read_v2": "read",
+        "denied_engineer": "denied",
+        "stale_write": "version_conflict",
+        "changed_retry": "idempotency_conflict"
+      },
+      "content_printed": false,
+      "first_run": {
+        "versions": 2,
+        "audit_events": 7,
+        "write_requests": 1
+      },
+      "after_server_restart": {
+        "versions": 2,
+        "audit_events": 7,
+        "write_requests": 1
+      },
+      "repeated_run": {
+        "versions": 2,
+        "audit_events": 14,
+        "write_requests": 1,
+        "append_v2_replayed": true
+      }
+    },
+    "postgres_restart": {
+      "status": "passed",
+      "server": "PostgreSQL 17.10 (Homebrew)",
+      "temporary_cluster": true,
+      "stop": "pg_ctl stop -m fast",
+      "start_requires": "LC_ALL=C on macOS; without it startup failed with 'postmaster became multithreaded during startup'",
+      "server_stopped_after_checks": false
     },
     "documentation_links": {
       "status": "passed",
-      "local_links": 79,
-      "markdown_files": 17
+      "local_links": 105,
+      "markdown_files": 20
     },
     "whitespace": {
       "status": "passed",
-      "scope": "tracked changes and all new files before the feature commit; publication documentation checked separately"
+      "scope": "tracked changes and all new files before the stage commit"
     },
     "function_documentation": {
       "status": "passed",
-      "scope": "all functions in app, tests and scripts"
+      "definitions_checked": 183,
+      "scope": "all functions and classes in app, tests, scripts and migrations"
     },
     "http_contract_regression": {
       "status": "passed",
@@ -106,6 +179,11 @@
         "run_id": 40102234278,
         "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40102234278"
       }
+    },
+    "stage_03": {
+      "status": "not_published_at_local_check",
+      "remote_ref": "not_verified",
+      "github_actions": "not_verified"
     }
   },
   "previous_stages": {
@@ -218,25 +296,155 @@
         "Docs HTML was checked, not browser rendering.",
         "Dependency installation and local HTTP required permitted network execution."
       ]
+    },
+    "02": {
+      "schema_version": 2,
+      "stage": "02",
+      "checked_at": "2026-10-24T19:23:50+05:00",
+      "scope": "Pure Python offline access policy and metadata-only audit values; HTTP liveness unchanged",
+      "revision": {
+        "branch": "develop",
+        "base_commit": "1a80825f0075fe0c28c0e7014d49871f6ce9b230",
+        "code_commit": "fc14d27364742c3dd14af988af3e101b1cb47070",
+        "state": "published_code_commit",
+        "note": "Publication evidence recorded after the feature commit; subsequent documentation commits do not change application code."
+      },
+      "runtime": {
+        "python": "3.12.15",
+        "uv": "0.12.23"
+      },
+      "packages": {
+        "fastapi": "0.143.0",
+        "pydantic": "2.14.0",
+        "pydantic-settings": "2.15.0",
+        "uvicorn": "0.54.0",
+        "pytest": "9.1.1",
+        "ruff": "0.16.10",
+        "mypy": "2.4.0"
+      },
+      "lock": {
+        "sha256": "8fd22488361f992e6601c86e744d7cead32e3ab291b02de1a616cd6569058616",
+        "exclude_newer": "2026-10-10T00:00:00Z"
+      },
+      "checks": {
+        "sync_locked_offline": {
+          "status": "passed",
+          "installed_packages_checked": 30
+        },
+        "pytest": {
+          "status": "passed",
+          "tests_passed": 139,
+          "domain": 103,
+          "foundation": 34,
+          "demo": 2
+        },
+        "ruff_check": {
+          "status": "passed"
+        },
+        "ruff_format": {
+          "status": "passed"
+        },
+        "mypy": {
+          "status": "passed",
+          "source_files": 20
+        },
+        "lock_offline": {
+          "status": "passed",
+          "resolved_packages": 33,
+          "unchanged": true
+        },
+        "offline_demo": {
+          "status": "passed",
+          "cases": 8,
+          "allowed": 1,
+          "denied": 7,
+          "deterministic": true
+        },
+        "documentation_links": {
+          "status": "passed",
+          "local_links": 79,
+          "markdown_files": 17
+        },
+        "whitespace": {
+          "status": "passed",
+          "scope": "tracked changes and all new files before the feature commit; publication documentation checked separately"
+        },
+        "function_documentation": {
+          "status": "passed",
+          "scope": "all functions in app, tests and scripts"
+        },
+        "http_contract_regression": {
+          "status": "passed",
+          "method": "TestClient",
+          "application_paths": [
+            "/health"
+          ],
+          "new_network_smoke": false
+        }
+      },
+      "publication": {
+        "stage_01": {
+          "commit": "1a80825f0075fe0c28c0e7014d49871f6ce9b230",
+          "branch": "develop",
+          "remote_ref": "verified",
+          "github_actions": {
+            "status": "completed",
+            "conclusion": "success",
+            "run_id": 40101385719,
+            "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40101385719"
+          }
+        },
+        "stage_02": {
+          "status": "published",
+          "commit": "fc14d27364742c3dd14af988af3e101b1cb47070",
+          "branch": "develop",
+          "remote_ref": "verified",
+          "github_actions": {
+            "status": "completed",
+            "conclusion": "success",
+            "run_id": 40102234278,
+            "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40102234278"
+          }
+        }
+      },
+      "not_implemented": [
+        "persistent_memory",
+        "database",
+        "authentication",
+        "http_authorization",
+        "audit_storage",
+        "transactions",
+        "retrieval",
+        "agent_tools",
+        "corporate_connector",
+        "containers"
+      ],
+      "limitations": [
+        "Actor IDs and snapshot objects are supplied metadata, not authenticated identity.",
+        "Access checks do not return content or perform writes.",
+        "Audit values describe authorization attempts and are not stored.",
+        "WRITE checks an existing document and version only.",
+        "Historical network smoke belongs to Stage 01; Stage 02 HTTP regression used TestClient."
+      ]
     }
   },
   "not_implemented": [
-    "persistent_memory",
-    "database",
     "authentication",
-    "http_authorization",
-    "audit_storage",
-    "transactions",
+    "memory_http_api",
+    "general_document_intake",
+    "grant_administration_api",
     "retrieval",
     "agent_tools",
     "corporate_connector",
     "containers"
   ],
   "limitations": [
-    "Actor IDs and snapshot objects are supplied metadata, not authenticated identity.",
-    "Access checks do not return content or perform writes.",
-    "Audit values describe authorization attempts and are not stored.",
-    "WRITE checks an existing document and version only.",
-    "Historical network smoke belongs to Stage 01; Stage 02 HTTP regression used TestClient."
+    "Caller IDs remain trusted Python input, not authenticated identity.",
+    "Initial documents and rights are privileged fictional lab bootstrap.",
+    "Version overwrite is absent from the adapter API; database owners can modify records directly.",
+    "Company row locks serialize this adapter; direct administrative changes must coordinate with the same boundary.",
+    "Audit history is not tamper-proof against the database owner.",
+    "PostgreSQL temporary native lab is not a deployed service.",
+    "HTTP application and liveness remain independent of the database."
   ]
 }

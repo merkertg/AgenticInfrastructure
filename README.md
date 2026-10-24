@@ -9,17 +9,19 @@ The project implements the **shared memory** alternative of the
 `#AgenticInfrastructure` assignment. Agent discovery, task exchange and a general
 corporate automation platform are outside the current roadmap.
 
-**Current implementation: Stages 01–02 — API foundation and offline access
-policy.** The HTTP service exposes `GET /health`, validated settings and generated
-API documentation. A separate pure Python domain models companies, employees,
-delegated agents, documents, versions and grants. It evaluates access requests
-and constructs audit-event metadata on fictional inputs. Actual check results
+**Current implementation: Stages 01–03 — API foundation, access policy and
+PostgreSQL persistence.** The HTTP service still exposes only `GET /health`
+and generated documentation. The pure Python domain models companies,
+employees, delegated agents, documents, versions and grants. A separate storage
+adapter reads existing versions, appends new versions and commits operation
+audit metadata and write-replay records transactionally. Actual check results
 and publication state belong to [verification](docs/VERIFICATION.md).
 
-Durable memory, authenticated identity, HTTP authorization, audit storage,
-document retrieval, agent tools and corporate connectors are **planned**. The
-current build needs no database, model provider, corporate credentials or
-external service.
+Persistence operations currently use a trusted Python caller and fictional
+laboratory data. Authenticated identity, an authorized memory HTTP API, search,
+agent tools and corporate connectors are **planned**. The health service and
+offline policy demo need no database; the persistence demo and integration tests
+need PostgreSQL. No model provider or corporate credentials are required.
 
 ## Quickstart
 
@@ -80,20 +82,55 @@ An `employee_id` in these offline inputs is metadata, not proof of identity.
 See the [domain instructions](docs/instructions/domain.md) and
 [detailed Stage 02 guide](docs/STAGE_02.md).
 
+## PostgreSQL laboratory
+
+Use a separate local laboratory database and apply the schema before running
+the persistence demo:
+
+```bash
+export DATABASE_URL='postgresql+psycopg://agentic@127.0.0.1:55435/agentic_lab'
+uv run --locked alembic upgrade head
+uv run --locked python -m app.persistence_demo --setup
+uv run --locked python -m app.persistence_demo
+```
+
+Reads use current stored permissions and return content only after audit commit.
+Writes append a new version with an expected current revision number. The new
+version, audit row and idempotency row commit together. Identical authorized
+retries reuse the original result; changed payloads and stale versions conflict.
+Access is reevaluated before replay. Write results contain version metadata,
+not document content.
+
+Run `--setup` once in a new local database ending in `_lab`; it creates fictional
+starting records and rejects an already populated company set. Further demo runs
+use the saved data and replay the same write. The lab's actor IDs are still
+metadata, not authenticated identity. No memory
+route is added to FastAPI. See [persistence instructions](docs/instructions/persistence.md)
+and the [detailed Stage 03 guide](docs/STAGE_03.md) for database setup, test safety,
+transaction boundaries and current limitations.
+
 ## Verify
 
 ```bash
 uv sync --locked
 uv run --locked ruff check .
 uv run --locked ruff format --check .
-uv run --locked mypy app tests scripts
-uv run --locked pytest
+uv run --locked mypy app tests scripts migrations
+uv run --locked pytest -m 'not postgres'
 uv run --locked python scripts/check_docs.py
 ```
 
-Tests isolate local settings and require no external services. Passing local
-checks, a configured workflow, a published commit and a completed GitHub Actions
-run are recorded separately. See [CI](docs/CI_CD.md).
+Unit tests isolate local settings and require no external services. PostgreSQL
+tests require an explicit disposable local test database:
+
+```bash
+export TEST_DATABASE_URL='postgresql+psycopg://agentic@127.0.0.1:55435/agentic_test'
+uv run --locked pytest -m postgres
+```
+
+An absent test URL skips database tests in ordinary runs; it does not verify
+persistence. Passing local checks, a configured workflow, a published commit and
+a completed GitHub Actions run are recorded separately. See [CI](docs/CI_CD.md).
 
 ## Target scenario
 
@@ -103,14 +140,16 @@ cannot retrieve finance material. Agents of either employee must also be unable
 to read another company's content. A response must respect current permissions,
 including revoked grants, and cite the document versions it used.
 
-Stage 02 checks the access-policy part of this scenario on immutable in-memory
-objects. Source retrieval, storage and authenticated request handling remain
-future stages.
+Stage 02 checks policy on immutable in-memory objects. Stage 03 loads stored
+policy objects and preserves version appends and audit history in PostgreSQL.
+Search, source synchronization and authenticated HTTP handling remain future
+stages.
 
 ## Documentation
 
 - [Detailed Stage 01 guide in Russian](docs/STAGE_01.md)
 - [Detailed Stage 02 guide in Russian](docs/STAGE_02.md)
+- [Detailed Stage 03 guide in Russian](docs/STAGE_03.md)
 - [Roadmap and completion criteria in Russian](docs/ROADMAP.md)
 - [Approach and boundaries](docs/APPROACH.md)
 - [Quickstart](docs/instructions/quickstart.md), [API usage](docs/instructions/usage.md),
@@ -118,6 +157,8 @@ future stages.
 - [CI and publication](docs/CI_CD.md)
 - [Architecture decision](docs/adr/0001-shared-memory-and-staged-delivery.md)
 - [Domain policy decision](docs/adr/0002-domain-memory-access-policy.md)
+- [Persistence instructions](docs/instructions/persistence.md) and
+  [transaction decision](docs/adr/0003-postgresql-memory-audit.md)
 - [Development log](docs/DEVELOPMENT_LOG.md) and [verification](docs/VERIFICATION.md)
 - [Learning guide index](docs/guide/README.md)
 

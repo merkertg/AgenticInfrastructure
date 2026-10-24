@@ -5,9 +5,12 @@ description = "A staged learning project for shared corporate memory for AI agen
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "alembic>=1.20,<2",
     "fastapi>=0.142.2,<1",
+    "psycopg[binary]>=3.3,<4",
     "pydantic>=2.12,<3",
     "pydantic-settings>=2.15,<3",
+    "sqlalchemy>=2.1.4,<2.2",
     "uvicorn>=0.54,<1",
 ]
 
@@ -28,6 +31,9 @@ exclude-newer = "2026-10-10T00:00:00Z"
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--strict-markers"
+markers = [
+    "postgres: requires TEST_DATABASE_URL pointing to a disposable local database ending in _test",
+]
 
 [tool.ruff]
 target-version = "py312"
