@@ -1,0 +1,110 @@
+{
+  "stage": "01",
+  "checked_at": "2026-10-24T17:22:29+05:00",
+  "scope": "FastAPI liveness foundation only",
+  "revision": {
+    "branch": "develop",
+    "base_commit": "17e1d59",
+    "state": "uncommitted_working_tree"
+  },
+  "runtime": {
+    "python": "3.12.15",
+    "uv": "0.12.23"
+  },
+  "packages": {
+    "fastapi": "0.143.0",
+    "pydantic": "2.14.0",
+    "pydantic-settings": "2.15.0",
+    "uvicorn": "0.54.0",
+    "pytest": "9.1.1",
+    "ruff": "0.16.10",
+    "mypy": "2.4.0"
+  },
+  "lock": {
+    "sha256": "8fd22488361f992e6601c86e744d7cead32e3ab291b02de1a616cd6569058616",
+    "exclude_newer": "2026-10-10T00:00:00Z"
+  },
+  "checks": {
+    "sync_locked": {
+      "status": "passed",
+      "installed_packages": 30
+    },
+    "pytest": {
+      "status": "passed",
+      "tests_passed": 34
+    },
+    "ruff_check": {
+      "status": "passed"
+    },
+    "ruff_format": {
+      "status": "passed"
+    },
+    "mypy": {
+      "status": "passed",
+      "source_files": 8
+    },
+    "lock_offline": {
+      "status": "passed",
+      "resolved_packages": 33
+    },
+    "documentation_links": {
+      "status": "passed",
+      "local_links": 56,
+      "markdown_files": 14
+    },
+    "whitespace": {
+      "status": "passed",
+      "tracked_diff": true,
+      "untracked_files": 28
+    },
+    "http_smoke": {
+      "status": "passed",
+      "base_url": "http://127.0.0.1:8005",
+      "health": {
+        "status": "ok",
+        "service": "agentic-infrastructure"
+      },
+      "endpoints": {
+        "GET /health": 200,
+        "GET /docs": 200,
+        "GET /redoc": 200,
+        "GET /openapi.json": 200,
+        "GET /": 404,
+        "GET /memory": 404,
+        "GET /agents": 404,
+        "POST /health": 405
+      },
+      "openapi_paths": [
+        "/health"
+      ],
+      "server_stopped": true
+    },
+    "function_documentation": {
+      "status": "passed",
+      "scope": "all functions in app, tests and scripts"
+    }
+  },
+  "publication": {
+    "commit_push": "not_performed",
+    "remote_ref": "not_verified",
+    "github_actions": "not_verified"
+  },
+  "not_implemented": [
+    "corporate_memory",
+    "domain_policy",
+    "database",
+    "authentication",
+    "authorization",
+    "audit",
+    "retrieval",
+    "agent_tools",
+    "corporate_connector",
+    "containers"
+  ],
+  "limitations": [
+    "Local checks cover the current uncommitted working tree.",
+    "Health is liveness only.",
+    "Docs HTML was checked, not browser rendering.",
+    "Dependency installation and local HTTP required permitted network execution."
+  ]
+}

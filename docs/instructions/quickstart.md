@@ -1,0 +1,47 @@
+# Quickstart
+
+[README](../../README.md) · [Detailed Russian guide](../STAGE_01.md)
+
+Use Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+Run commands from the repository root:
+
+```bash
+uv sync --locked
+cp -n .env.example .env
+uv run --locked uvicorn app.main:app --reload --host 127.0.0.1 --port 8005
+```
+
+The `.env` copy is optional: defaults allow local startup. Do not commit `.env`.
+`--reload` is for development. Bind to loopback while using this learning stage.
+`APP_ENV=production` is a configuration label; it does not install authentication
+or make this foundation ready for production.
+
+In another terminal:
+
+```bash
+curl -i http://127.0.0.1:8005/health
+```
+
+Expected status: `200`. Default body:
+
+```json
+{"status":"ok","service":"agentic-infrastructure"}
+```
+
+Open [Swagger UI](http://127.0.0.1:8005/docs),
+[ReDoc](http://127.0.0.1:8005/redoc) or
+[OpenAPI JSON](http://127.0.0.1:8005/openapi.json) while the server is running.
+Swagger UI and ReDoc load browser assets from a CDN; their HTML endpoints can
+respond even when the browser cannot load those assets offline.
+
+The root `/`, `/memory` and `/agents` return `404`. Only `/health` is implemented.
+Stop the server with `Ctrl+C`.
+
+If uv cannot write to its cache, use a writable cache directory for the command:
+
+```bash
+UV_CACHE_DIR=/private/tmp/agentic-infrastructure-uv-cache uv sync --locked
+```
+
+If package downloads fail, check network access. If port 8005 is occupied, choose
+another local port. Neither issue is evidence that the health handler is wrong.
