@@ -5,8 +5,10 @@
 Дата: **2026-10-24**, часовой пояс пользователя — Asia/Tashkent.
 Проверка этапа 04 выполнена в `develop` на рабочем дереве поверх опубликованного
 этапа 03 и записи о его публикации: `6faac66b59fd3d7ccf560d76d7b29ab3f8cf77c6`.
-Состояние публикации каждого этапа приведено отдельно ниже. Commit этапа 04
-на момент этих проверок не создан.
+Локальные результаты получены до создания commit этапа 04.
+Публикация проверена **2026-10-25**: код находится в
+`66168308e0e5e9538310e9338ca5967db48ba033`; удалённый SHA и CI подтверждены
+отдельно. Обновление отчёта не изменяет приложение.
 
 ## Реализованная граница этапа 04
 
@@ -122,12 +124,15 @@ Uvicorn запущен на `127.0.0.1:8005` с `APP_DATABASE_URL` этой ба
 | 01 | `1a80825f0075fe0c28c0e7014d49871f6ce9b230`, SHA подтверждён при публикации в `develop` | [CI 40101385719](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40101385719), `completed / success` для этого SHA |
 | 02 | `fc14d27364742c3dd14af988af3e101b1cb47070`, SHA `origin/develop` подтверждён через `git ls-remote` после push | [CI 40102234278](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40102234278), `completed / success` для этого SHA |
 | 03 | `955aec742d48d741a2a4962b674790e4924abd6e`, SHA `origin/develop` подтверждён через `git ls-remote` после push | [CI 40104677151](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40104677151), `completed / success` для этого SHA, включая шаг PostgreSQL |
-| 04 | Не опубликован на момент локальных проверок — `not_verified` | `not_verified` |
+| 04 | `66168308e0e5e9538310e9338ca5967db48ba033`, SHA подтверждён в `origin/develop` через `git ls-remote` | [CI 40117305558](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40117305558), `completed / success` для этого SHA, включая шаг PostgreSQL |
 
 Для этапа 03 журнал шага с числом тестов в CI не читался: его загрузка
 требует авторизации. Workflow не менялся на этапе 04: новые PostgreSQL-тесты
 выполняются существующим шагом `pytest -m postgres`. Конфигурация не является
 результатом; удалённый CI проверяется отдельно для каждого SHA.
+Для этапа 04 дополнительно получены результаты job: проверка типов,
+тесты без БД, PostgreSQL-тесты и проверка документации завершены с `success`.
+Число тестов из удалённого журнала отдельно не извлекалось.
 
 ## Что ещё отсутствует
 

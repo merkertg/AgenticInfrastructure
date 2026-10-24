@@ -6,7 +6,9 @@
   "revision": {
     "branch": "develop",
     "base_commit": "6faac66b59fd3d7ccf560d76d7b29ab3f8cf77c6",
-    "state": "verified_working_tree_before_commit"
+    "state": "published_code_commit",
+    "code_commit": "66168308e0e5e9538310e9338ca5967db48ba033",
+    "note": "Publication evidence recorded after the code commit; no application change."
   },
   "runtime": {
     "python": "3.12.15",
@@ -185,9 +187,22 @@
       }
     },
     "stage_04": {
-      "status": "not_published_at_local_check",
-      "remote_ref": "not_verified",
-      "github_actions": "not_verified"
+      "status": "published",
+      "commit": "66168308e0e5e9538310e9338ca5967db48ba033",
+      "branch": "develop",
+      "remote_ref": "verified",
+      "verified_on": "2026-10-25",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40117305558,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40117305558",
+        "types_step": "success",
+        "unit_step": "success",
+        "postgres_step": "success",
+        "documentation_step": "success",
+        "test_counts_in_ci_log": "not_verified"
+      }
     }
   },
   "previous_stages": {
