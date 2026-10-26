@@ -2,8 +2,9 @@
 
 [README](../README.md) · [Local results](VERIFICATION.md)
 
-The [workflow](../.github/workflows/ci.yml) runs on pushes to `main` and `develop`,
-pull requests targeting those branches, and manual dispatch. It installs Python
+The [workflow](../.github/workflows/ci.yml) runs on pushes to `main`,
+pull requests targeting `main`, and manual dispatch. Stages are published
+directly to `main`; the former `develop` branch was removed on 2026-10-27. It installs Python
 3.12 and uv, synchronizes `uv.lock`, then checks lint, formatting, strict types,
 unit tests, local documentation links and whitespace. The PostgreSQL integration
 step uses a disposable PostgreSQL 17 service and an explicit local test URL. It
