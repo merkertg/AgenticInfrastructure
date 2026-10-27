@@ -39,6 +39,10 @@
   pass its ID to `MemoryStore` for a recheck under the company lock. Keep
   credential failures a uniform `401` and authorization denials a uniform `404`.
   Never store, log or audit plain tokens.
+- Context search authorizes the project and each document before loading text
+  or computing ranking statistics, rechecks selected documents before
+  returning, and stores references and a query digest only. Do not add a
+  persisted index or cache without permission-aware invalidation.
 - Publish only locally verified changes when publication is authorized. Verify
   remote refs independently from CI. A workflow file or a successful push does
   not prove that GitHub Actions passed.

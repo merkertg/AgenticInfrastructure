@@ -2,8 +2,9 @@
 
 The learning guides are [Stage 01: API foundation](../STAGE_01.md),
 [Stage 02: offline domain and access policy](../STAGE_02.md),
-[Stage 03: PostgreSQL versions and audit](../STAGE_03.md) and
-[Stage 04: agent identity and memory API](../STAGE_04.md). The project has no
+[Stage 03: PostgreSQL versions and audit](../STAGE_03.md),
+[Stage 04: agent identity and memory API](../STAGE_04.md) and
+[Stage 05: intake and context search](../STAGE_05.md). The project has no
 generated PDF guide at this stage.
 
 [verification.json](verification.json) records machine-readable local results.

@@ -12,6 +12,7 @@ from uuid import uuid4
 from sqlalchemy import Connection, Engine, Table, func, insert, select
 from sqlalchemy.engine import RowMapping
 
+from app.application.context import ContextItem, ContextOutcome, ContextResult
 from app.application.memory import MemoryOutcome, MemoryResult
 from app.domain.audit import make_audit_event
 from app.domain.models import (
@@ -27,9 +28,19 @@ from app.domain.models import (
     Grant,
     Project,
     ReasonCode,
+    ScopeRequest,
 )
-from app.domain.policy import evaluate_access
+from app.domain.policy import evaluate_access, evaluate_scope
+from app.domain.retrieval import (
+    Candidate,
+    RankedFragment,
+    query_terms,
+    rank,
+    select_context,
+)
+from app.domain.text import split_fragments
 from app.persistence import schema as db
+from app.persistence.context import ScopeSnapshot, authorized_versions, record_context
 from app.persistence.credentials import credential_is_current
 
 
@@ -354,3 +365,185 @@ class MemoryStore:
             version_id=new_version.id,
             version_number=new_version.number,
         )
+
+    def _scope_decision(
+        self,
+        connection: Connection,
+        request: ScopeRequest,
+        credential_id: str | None,
+        occurred_at: datetime,
+    ) -> tuple[ReasonCode, ScopeSnapshot | None]:
+        """Lock the company, recheck the credential and evaluate project-wide access."""
+        company_row = (
+            connection.execute(
+                select(db.companies)
+                .where(db.companies.c.id == request.company_id)
+                .with_for_update()
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if credential_id is not None and not credential_is_current(
+            connection, request, credential_id, occurred_at
+        ):
+            return ReasonCode.CREDENTIAL_UNAVAILABLE, None
+        project_row = _row(
+            connection, db.projects, request.company_id, request.project_id
+        )
+        employee_row = _row(
+            connection, db.employees, request.company_id, request.employee_id
+        )
+        agent_row = _row(connection, db.agents, request.company_id, request.agent_id)
+        delegation_row = (
+            connection.execute(
+                select(db.delegations).where(
+                    db.delegations.c.company_id == request.company_id,
+                    db.delegations.c.project_id == request.project_id,
+                    db.delegations.c.employee_id == request.employee_id,
+                    db.delegations.c.agent_id == request.agent_id,
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        company = Company(**dict(company_row)) if company_row is not None else None
+        project = Project(**dict(project_row)) if project_row is not None else None
+        employee = Employee(**dict(employee_row)) if employee_row is not None else None
+        agent = Agent(**dict(agent_row)) if agent_row is not None else None
+        delegation = (
+            Delegation(**_actions(delegation_row))
+            if delegation_row is not None
+            else None
+        )
+        reason = evaluate_scope(
+            request,
+            company=company,
+            project=project,
+            employee=employee,
+            agent=agent,
+            delegation=delegation,
+        )
+        if reason is not ReasonCode.ALLOWED:
+            return reason, None
+        assert company and project and employee and agent and delegation
+        return reason, ScopeSnapshot(
+            company=company,
+            project=project,
+            employee=employee,
+            agent=agent,
+            delegation=delegation,
+        )
+
+    def _still_readable(
+        self,
+        connection: Connection,
+        request: ScopeRequest,
+        selected: tuple[RankedFragment, ...],
+        credential_id: str | None,
+        occurred_at: datetime,
+    ) -> tuple[RankedFragment, ...]:
+        """Reevaluate each selected version with fresh reads and drop lost access."""
+        verdicts: dict[str, bool] = {}
+        for entry in selected:
+            version_id = entry.candidate.version_id
+            if version_id not in verdicts:
+                decision, _ = self._decision(
+                    connection,
+                    AccessRequest(
+                        request_id=request.request_id,
+                        company_id=request.company_id,
+                        project_id=request.project_id,
+                        employee_id=request.employee_id,
+                        agent_id=request.agent_id,
+                        document_id=entry.candidate.document_id,
+                        version_id=version_id,
+                        action=Action.READ,
+                    ),
+                    credential_id,
+                    occurred_at,
+                )
+                verdicts[version_id] = decision.allowed
+        return tuple(
+            entry for entry in selected if verdicts[entry.candidate.version_id]
+        )
+
+    def search_context(
+        self,
+        request: ScopeRequest,
+        *,
+        query: str,
+        max_items: int,
+        occurred_at: datetime,
+        credential_id: str | None = None,
+    ) -> ContextResult:
+        """Filter documents by current rights, then rank, recheck, audit and commit."""
+        if not isinstance(request, ScopeRequest):
+            raise TypeError("request must be a ScopeRequest")
+        if request.action is not Action.READ:
+            raise ValueError("context search requires the read action")
+        if not isinstance(occurred_at, datetime):
+            raise TypeError("occurred_at must be a datetime")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ValueError("occurred_at must be timezone-aware")
+        if credential_id is not None and not isinstance(credential_id, str):
+            raise TypeError("credential_id must be a string or None")
+        terms = query_terms(query)
+        if type(max_items) is not int or not 1 <= max_items <= 10:
+            raise ValueError("max_items must be an integer from 1 to 10")
+        with self._transaction() as connection:
+            reason, scope = self._scope_decision(
+                connection, request, credential_id, occurred_at
+            )
+            if scope is None:
+                result = ContextResult(
+                    request=request, outcome=ContextOutcome.DENIED, reason=reason
+                )
+            else:
+                versions, truncated = authorized_versions(connection, request, scope)
+                candidates = tuple(
+                    Candidate(
+                        document_id=version.document_id,
+                        version_id=version.id,
+                        version_number=version.number,
+                        source=version.source,
+                        fragment=fragment,
+                    )
+                    for version in versions
+                    for fragment in split_fragments(version.content)
+                )
+                selected = select_context(rank(terms, candidates), max_items=max_items)
+                kept = self._still_readable(
+                    connection, request, selected, credential_id, occurred_at
+                )
+                result = ContextResult(
+                    request=request,
+                    outcome=ContextOutcome.FOUND
+                    if kept
+                    else ContextOutcome.NO_AUTHORIZED_EVIDENCE,
+                    reason=ReasonCode.ALLOWED,
+                    items=tuple(
+                        ContextItem(
+                            document_id=entry.candidate.document_id,
+                            version_id=entry.candidate.version_id,
+                            version_number=entry.candidate.version_number,
+                            source=entry.candidate.source,
+                            fragment=entry.candidate.fragment.ordinal,
+                            start=entry.candidate.fragment.start,
+                            end=entry.candidate.fragment.end,
+                            score=entry.score,
+                            text=entry.candidate.fragment.text,
+                        )
+                        for entry in kept
+                    ),
+                    truncated=truncated,
+                )
+            record_context(
+                connection,
+                result,
+                query_terms=len(terms),
+                query=query,
+                max_items=max_items,
+                occurred_at=occurred_at,
+                credential_id=credential_id,
+            )
+        return result

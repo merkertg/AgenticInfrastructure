@@ -9,6 +9,7 @@ The HTTP API exposes liveness and two authenticated memory operations:
 | GET | `/health` | `200`, `{"status":"ok","service":"agentic-infrastructure"}` with default settings |
 | GET | `/memory/projects/{project_id}/documents/{document_id}/versions/{version_id}` | Authorized version, bearer credential required |
 | POST | `/memory/projects/{project_id}/documents/{document_id}/versions` | Append the next version, bearer credential and `Idempotency-Key` required |
+| POST | `/memory/projects/{project_id}/context` | Ranked passages from currently readable documents, bearer credential required |
 
 `/health` is liveness only: the current HTTP application can answer a request.
 It performs no database, identity, connector, memory, authorization or LLM probe
@@ -16,7 +17,8 @@ and records no audit event. It works without `APP_DATABASE_URL`.
 
 Memory routes derive the actor from the server-stored credential, never from
 request fields or headers. See [memory API usage](memory-api.md) for lab
-credentials, status codes and limits.
+credentials, status codes and limits, and [context search](context-search.md)
+for document intake and search.
 
 `POST /health` returns `405`. `/`, `/memory` and `/agents` return `404`.
 `/docs`, `/redoc` and `/openapi.json` provide generated API documentation.
@@ -35,8 +37,8 @@ separate configuration. `APP_ENV` does not change permissions or install an
 identity provider; leave debug disabled when handling any sensitive information.
 
 The [roadmap](../ROADMAP.md) describes future shared-memory behavior. HTTP
-memory access currently covers stored versions of fictional lab documents only;
-no search, document intake or corporate source exists.
+memory access currently covers stored versions and context search over
+fictional lab documents; no model, agent tool or corporate source exists.
 
 For the Stage 02 access-policy demonstration, run from the repository root:
 

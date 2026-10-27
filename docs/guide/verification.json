@@ -1,14 +1,12 @@
 {
   "schema_version": 3,
-  "stage": "04",
-  "checked_at": "2026-10-24T22:39:10+05:00",
-  "scope": "Agent bearer credentials with hashed storage and in-transaction recheck; authenticated HTTP version read and append routes over PostgreSQL",
+  "stage": "05",
+  "checked_at": "2026-10-27T05:08:10+05:00",
+  "scope": "Trusted all-or-nothing UTF-8 text intake; permission-filtered deterministic BM25 context search with verifiable fragment references, final recheck and metadata-only history",
   "revision": {
-    "branch": "develop",
-    "base_commit": "6faac66b59fd3d7ccf560d76d7b29ab3f8cf77c6",
-    "state": "published_code_commit",
-    "code_commit": "66168308e0e5e9538310e9338ca5967db48ba033",
-    "note": "Publication evidence recorded after the code commit; no application change."
+    "branch": "main",
+    "base_commit": "2e229dce0d4f4ae2895c37dd2cc2a7359e359a75",
+    "state": "verified_working_tree_before_commit"
   },
   "runtime": {
     "python": "3.12.15",
@@ -31,6 +29,11 @@
     "exclude_newer": "2026-10-10T00:00:00Z",
     "unchanged_since_stage_03": true
   },
+  "environment": {
+    "postgres": "PostgreSQL 17.10 (Homebrew)",
+    "temporary_cluster": "recreated after /private/tmp was cleared; previous lab databases were lost",
+    "address": "127.0.0.1:55435"
+  },
   "checks": {
     "sync_locked": {
       "status": "passed",
@@ -40,32 +43,35 @@
     },
     "pytest": {
       "status": "passed",
-      "tests_passed": 261,
+      "tests_passed": 336,
       "without_postgres": {
-        "passed": 192,
-        "previous_stages": 158,
-        "memory_api_unit": 34
+        "passed": 237,
+        "previous_stages": 192,
+        "text_format": 16,
+        "retrieval_and_scope": 14,
+        "context_api_and_intake_cli": 15
       },
       "postgres": {
-        "passed": 69,
-        "memory_store": 24,
-        "constraints": 6,
-        "migrations": 4,
-        "credentials": 10,
-        "http_memory": 25
+        "passed": 99,
+        "previous_stages": 65,
+        "migrations": 5,
+        "intake": 8,
+        "context": 21,
+        "note": "previous_stages excludes migrations: memory store 24, constraints 6, credentials 10, HTTP memory 25"
       },
       "without_test_database_url": {
-        "passed": 192,
-        "skipped": 69,
+        "passed": 237,
+        "skipped": 99,
         "counts_as_postgres_check": false
       },
+      "deprecation_warnings_as_errors": true,
       "concurrency_repeats": {
         "runs": 3,
         "passed_per_run": 3
       },
       "mutation_checks": {
-        "credential_recheck_disabled": "5 PostgreSQL tests failed",
-        "employee_taken_from_header": "17 HTTP tests failed",
+        "sql_prefilter_and_policy_check_removed": "1 test failed (scores changed by unreadable text); the final recheck still removed unreadable passages",
+        "final_recheck_disabled": "1 test failed (revocation after ranking)",
         "source_restored": true
       }
     },
@@ -74,11 +80,11 @@
     },
     "ruff_format": {
       "status": "passed",
-      "files": 69
+      "files": 87
     },
     "mypy": {
       "status": "passed",
-      "source_files": 46,
+      "source_files": 60,
       "paths": [
         "app",
         "tests",
@@ -92,51 +98,66 @@
     },
     "migration": {
       "status": "passed",
-      "revision": "0002_agent_credentials",
-      "application_tables": 11,
+      "revision": "0003_context_history",
+      "application_tables": 13,
       "alembic_check": "No new upgrade operations detected.",
-      "downgrade_to_0001_and_upgrade_test": true,
-      "downgrade_upgrade_base_test": true
+      "downgrade_to_0002_and_upgrade_test": true
+    },
+    "lab_intake": {
+      "status": "passed",
+      "database": "fresh local agentic_stage05_lab",
+      "imported": {
+        "finance": [
+          "expense-guide",
+          "travel-policy"
+        ],
+        "engineering": [
+          "deploy-notes"
+        ]
+      },
+      "corrupted_batch": {
+        "exit_code": 1,
+        "rejected": [
+          [
+            "broken",
+            "not_utf8"
+          ],
+          [
+            "empty",
+            "empty"
+          ]
+        ],
+        "imported": 0
+      }
     },
     "http_network_smoke": {
       "status": "passed",
       "server": "uvicorn app.main:app --host 127.0.0.1 --port 8005",
-      "database": "fresh local agentic_stage04_lab",
-      "credentials_issued": 2,
       "responses": {
         "GET /health": 200,
-        "GET version without token": 401,
-        "GET version unknown token": 401,
-        "GET version finance agent": 200,
-        "GET version engineering agent": 404,
-        "GET version engineering agent with X-Employee-ID and query employee_id": 404,
-        "POST append": 201,
-        "POST identical retry": 200,
-        "POST changed payload same key": 409,
-        "POST stale expected number": 409,
-        "POST engineering agent": 404,
-        "POST body with employee_id": 422,
-        "GET appended version": 200,
-        "GET /memory": 404,
-        "GET /docs": 200,
-        "GET /redoc": 200
+        "POST finance context, finance agent": "200 found, 3 items, offsets reproduce fixture text",
+        "POST finance context, query zebra": "200 no_authorized_evidence",
+        "POST engineering context, finance agent": 404,
+        "POST engineering context, engineering agent": "200 found, embedded instruction returned as data",
+        "POST finance context, engineering agent": 404,
+        "POST context, unknown token": 401,
+        "POST context with project_id in body": 422,
+        "GET context": 405
       },
       "cache_control": "no-store",
-      "appended_source": "agent:fin-agent",
-      "database_after": {
-        "versions": 2,
-        "write_requests": 1,
-        "audit_events": 11,
-        "audit_rows_with_credential_id": 11
+      "history_after": {
+        "context_requests": 7,
+        "context_items": 8,
+        "rows_with_credential_id": 7
       },
+      "query_or_content_in_history": false,
       "token_in_server_log": false,
-      "token_or_content_in_audit": false,
       "server_stopped": true
     },
     "documentation_links": {
       "status": "passed",
-      "local_links": 134,
-      "markdown_files": 23
+      "local_links": 162,
+      "markdown_files": 26
     },
     "whitespace": {
       "status": "passed",
@@ -144,7 +165,7 @@
     },
     "function_documentation": {
       "status": "passed",
-      "definitions_checked": 262,
+      "definitions_checked": 361,
       "scope": "all functions and classes in app, tests, scripts and migrations"
     }
   },
@@ -220,6 +241,12 @@
       "workflow_branches": [
         "main"
       ]
+    },
+    "stage_05": {
+      "status": "not_published_at_local_check",
+      "branch": "main",
+      "remote_ref": "not_verified",
+      "github_actions": "not_verified"
     }
   },
   "previous_stages": {
@@ -658,29 +685,223 @@
           }
         }
       }
+    },
+    "04": {
+      "schema_version": 3,
+      "stage": "04",
+      "checked_at": "2026-10-24T22:39:10+05:00",
+      "scope": "Agent bearer credentials with hashed storage and in-transaction recheck; authenticated HTTP version read and append routes over PostgreSQL",
+      "revision": {
+        "branch": "develop",
+        "base_commit": "6faac66b59fd3d7ccf560d76d7b29ab3f8cf77c6",
+        "state": "published_code_commit",
+        "code_commit": "66168308e0e5e9538310e9338ca5967db48ba033",
+        "note": "Publication evidence recorded after the code commit; no application change."
+      },
+      "runtime": {
+        "python": "3.12.15",
+        "uv": "0.12.23"
+      },
+      "packages": {
+        "fastapi": "0.143.0",
+        "pydantic": "2.14.0",
+        "pydantic-settings": "2.15.0",
+        "uvicorn": "0.54.0",
+        "pytest": "9.1.1",
+        "ruff": "0.16.10",
+        "mypy": "2.4.0",
+        "sqlalchemy": "2.1.4",
+        "psycopg": "3.3.6",
+        "alembic": "1.20.0"
+      },
+      "lock": {
+        "sha256": "0772eb6b83e5cc05e74f3709dfa2f3576c1e6df54ef9e61533a4cb47f3c1e635",
+        "exclude_newer": "2026-10-10T00:00:00Z",
+        "unchanged_since_stage_03": true
+      },
+      "checks": {
+        "sync_locked": {
+          "status": "passed",
+          "offline": true,
+          "installed_packages_checked": 36,
+          "new_packages_installed": 0
+        },
+        "pytest": {
+          "status": "passed",
+          "tests_passed": 261,
+          "without_postgres": {
+            "passed": 192,
+            "previous_stages": 158,
+            "memory_api_unit": 34
+          },
+          "postgres": {
+            "passed": 69,
+            "memory_store": 24,
+            "constraints": 6,
+            "migrations": 4,
+            "credentials": 10,
+            "http_memory": 25
+          },
+          "without_test_database_url": {
+            "passed": 192,
+            "skipped": 69,
+            "counts_as_postgres_check": false
+          },
+          "concurrency_repeats": {
+            "runs": 3,
+            "passed_per_run": 3
+          },
+          "mutation_checks": {
+            "credential_recheck_disabled": "5 PostgreSQL tests failed",
+            "employee_taken_from_header": "17 HTTP tests failed",
+            "source_restored": true
+          }
+        },
+        "ruff_check": {
+          "status": "passed"
+        },
+        "ruff_format": {
+          "status": "passed",
+          "files": 69
+        },
+        "mypy": {
+          "status": "passed",
+          "source_files": 46,
+          "paths": [
+            "app",
+            "tests",
+            "scripts",
+            "migrations"
+          ]
+        },
+        "lock_offline": {
+          "status": "passed",
+          "resolved_packages": 40
+        },
+        "migration": {
+          "status": "passed",
+          "revision": "0002_agent_credentials",
+          "application_tables": 11,
+          "alembic_check": "No new upgrade operations detected.",
+          "downgrade_to_0001_and_upgrade_test": true,
+          "downgrade_upgrade_base_test": true
+        },
+        "http_network_smoke": {
+          "status": "passed",
+          "server": "uvicorn app.main:app --host 127.0.0.1 --port 8005",
+          "database": "fresh local agentic_stage04_lab",
+          "credentials_issued": 2,
+          "responses": {
+            "GET /health": 200,
+            "GET version without token": 401,
+            "GET version unknown token": 401,
+            "GET version finance agent": 200,
+            "GET version engineering agent": 404,
+            "GET version engineering agent with X-Employee-ID and query employee_id": 404,
+            "POST append": 201,
+            "POST identical retry": 200,
+            "POST changed payload same key": 409,
+            "POST stale expected number": 409,
+            "POST engineering agent": 404,
+            "POST body with employee_id": 422,
+            "GET appended version": 200,
+            "GET /memory": 404,
+            "GET /docs": 200,
+            "GET /redoc": 200
+          },
+          "cache_control": "no-store",
+          "appended_source": "agent:fin-agent",
+          "database_after": {
+            "versions": 2,
+            "write_requests": 1,
+            "audit_events": 11,
+            "audit_rows_with_credential_id": 11
+          },
+          "token_in_server_log": false,
+          "token_or_content_in_audit": false,
+          "server_stopped": true
+        },
+        "documentation_links": {
+          "status": "passed",
+          "local_links": 134,
+          "markdown_files": 23
+        },
+        "whitespace": {
+          "status": "passed",
+          "scope": "tracked changes and all new files before the stage commit"
+        },
+        "function_documentation": {
+          "status": "passed",
+          "definitions_checked": 262,
+          "scope": "all functions and classes in app, tests, scripts and migrations"
+        }
+      },
+      "not_implemented": [
+        "corporate_identity_provider",
+        "interactive_employee_authentication",
+        "credential_management_api",
+        "rate_limiting",
+        "failed_authentication_history",
+        "tls",
+        "general_document_intake",
+        "document_listing",
+        "retrieval",
+        "agent_tools",
+        "corporate_connector",
+        "containers"
+      ],
+      "limitations": [
+        "Bearer tokens impersonate their agent until expiry or revocation.",
+        "Credential issuance is privileged fictional lab setup.",
+        "Employee authority comes from trusted registration, delegation and grant records, not interactive login.",
+        "Unauthenticated and validation-rejected requests are not business-audited.",
+        "Loopback HTTP only; transport security is not configured.",
+        "Database owners can modify records, credentials and audit directly.",
+        "PostgreSQL temporary native lab is not a deployed service."
+      ],
+      "publication": {
+        "stage_04": {
+          "status": "published",
+          "commit": "66168308e0e5e9538310e9338ca5967db48ba033",
+          "branch": "develop",
+          "remote_ref": "verified",
+          "verified_on": "2026-10-25",
+          "github_actions": {
+            "status": "completed",
+            "conclusion": "success",
+            "run_id": 40117305558,
+            "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40117305558",
+            "types_step": "success",
+            "unit_step": "success",
+            "postgres_step": "success",
+            "documentation_step": "success",
+            "test_counts_in_ci_log": "not_verified"
+          }
+        }
+      }
     }
   },
   "not_implemented": [
-    "corporate_identity_provider",
-    "interactive_employee_authentication",
-    "credential_management_api",
-    "rate_limiting",
-    "failed_authentication_history",
-    "tls",
-    "general_document_intake",
-    "document_listing",
-    "retrieval",
+    "semantic_or_vector_search",
+    "persisted_search_index",
+    "result_cache",
+    "http_document_intake",
+    "document_deletion_api",
     "agent_tools",
+    "model_provider",
+    "corporate_identity_provider",
+    "rate_limiting",
+    "tls",
     "corporate_connector",
     "containers"
   ],
   "limitations": [
-    "Bearer tokens impersonate their agent until expiry or revocation.",
-    "Credential issuance is privileged fictional lab setup.",
-    "Employee authority comes from trusted registration, delegation and grant records, not interactive login.",
-    "Unauthenticated and validation-rejected requests are not business-audited.",
-    "Loopback HTTP only; transport security is not configured.",
-    "Database owners can modify records, credentials and audit directly.",
+    "Lexical BM25 matches words only, without synonyms or meaning.",
+    "Each search rereads and splits candidate versions; at most 200 readable documents are considered.",
+    "Intake is privileged fictional lab setup.",
+    "Query digests in history can be guessed for short queries.",
+    "Bearer tokens impersonate their agent until expiry or revocation; loopback HTTP only.",
+    "Database owners can modify documents, grants, credentials and history directly.",
     "PostgreSQL temporary native lab is not a deployed service."
   ]
 }

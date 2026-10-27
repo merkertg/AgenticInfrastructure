@@ -51,10 +51,15 @@ call the memory HTTP routes through `TestClient` on the same database: invalid,
 revoked and expired credentials, spoofed identity headers and body fields,
 other companies and projects, revoked delegation, exceeded rights, write replay
 and conflicts, audit failure and revocation between authentication and the
-locked operation. The [persistence guide](persistence.md) describes local setup.
+locked operation. Stage 05 adds all-or-nothing intake, permission filtering
+before ranking, score independence from unreadable documents, explicit empty
+results, revocation and deletion between searches, new and inactive versions,
+other projects and companies, embedded instructions, revocation after ranking,
+search limits and context-history failure. Domain tests cover the text format,
+fragment offsets, query rules, deterministic ranking and project scope. The [persistence guide](persistence.md) describes local setup.
 
-Neither suite establishes production identity integration, retrieval quality,
-corporate source behavior or LLM behavior. A process reconnection and a real
+Neither suite establishes production identity integration, semantic retrieval
+quality, corporate source behavior or LLM behavior. A process reconnection and a real
 database-server restart are different checks; the verification report states
 which was actually performed.
 

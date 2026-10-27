@@ -11,9 +11,9 @@ from app.api.memory import (
     NOT_CONFIGURED,
     UNAUTHORIZED,
     AppendVersionBody,
-    derive_version_id,
 )
 from app.config import Settings
+from app.domain.versions import derive_version_id
 from app.persistence.credentials import (
     CredentialAuthenticator,
     generate_token,

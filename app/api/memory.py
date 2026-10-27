@@ -1,27 +1,30 @@
-"""Expose authenticated memory version reads and appends over HTTP."""
+"""Expose authenticated memory version reads, appends and context search."""
 
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated
-from uuid import NAMESPACE_URL, uuid4, uuid5
+from typing import Annotated, Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.application.context import ContextOutcome
 from app.application.identity import Principal
 from app.application.memory import MemoryOutcome
-from app.domain.models import AccessRequest, Action, DocumentVersion
+from app.domain.models import AccessRequest, Action, DocumentVersion, ScopeRequest
+from app.domain.retrieval import MAX_ITEMS, MAX_QUERY_CHARACTERS, query_terms
+from app.domain.versions import derive_version_id
 from app.persistence.credentials import CredentialAuthenticator
 from app.persistence.memory import MemoryStore
 
 IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
-VERSION_NAMESPACE = uuid5(NAMESPACE_URL, "urn:agentic-infrastructure:memory-version")
 UNAUTHORIZED = "invalid or missing credentials"
 NOT_AVAILABLE = "memory version not available"
+CONTEXT_NOT_AVAILABLE = "memory context not available"
 STORAGE_UNAVAILABLE = "memory storage unavailable"
 NOT_CONFIGURED = "memory storage is not configured"
 
@@ -103,9 +106,46 @@ class AppendVersionResponse(BaseModel):
     replayed: bool
 
 
-def derive_version_id(company_id: str, document_id: str, number: int) -> str:
-    """Name a revision deterministically so an identical retry keeps its fingerprint."""
-    return str(uuid5(VERSION_NAMESPACE, f"{company_id}/{document_id}/{number}"))
+class ContextBody(BaseModel):
+    """Accept a bounded query only; scope comes from the path and the credential."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    query: Annotated[str, Field(min_length=1, max_length=MAX_QUERY_CHARACTERS)]
+    max_items: Annotated[int, Field(ge=1, le=MAX_ITEMS)] = 5
+
+    @field_validator("query")
+    @classmethod
+    def check_query(cls, value: str) -> str:
+        """Apply the domain query rules so invalid queries fail before storage."""
+        query_terms(value)
+        return value
+
+
+class ContextItemResponse(BaseModel):
+    """Return one authorized passage and the references that reproduce it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: str
+    version_id: str
+    version_number: int
+    source: str
+    fragment: int
+    start: int
+    end: int
+    score: float
+    text: str
+
+
+class ContextResponse(BaseModel):
+    """Report found evidence or say explicitly that no authorized evidence exists."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["found", "no_authorized_evidence"]
+    items: list[ContextItemResponse]
+    truncated: bool
 
 
 def _unauthorized() -> HTTPException:
@@ -253,4 +293,56 @@ def append_version(
         version_id=result.version_id,
         number=result.version_number,
         replayed=result.replayed,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/context",
+    response_model=ContextResponse,
+    responses=ERROR_RESPONSES,
+)
+def search_context(
+    project_id: ProjectId,
+    body: ContextBody,
+    caller: Annotated[Caller, Depends(authenticated_caller)],
+    response: Response,
+) -> ContextResponse:
+    """Return ranked passages from documents this agent may read right now."""
+    principal = caller.principal
+    result = caller.services.store.search_context(
+        ScopeRequest(
+            request_id=str(uuid4()),
+            company_id=principal.company_id,
+            project_id=project_id,
+            employee_id=principal.employee_id,
+            agent_id=principal.agent_id,
+            action=Action.READ,
+        ),
+        query=body.query,
+        max_items=body.max_items,
+        occurred_at=caller.occurred_at,
+        credential_id=principal.credential_id,
+    )
+    if result.outcome is ContextOutcome.DENIED:
+        raise HTTPException(status_code=404, detail=CONTEXT_NOT_AVAILABLE)
+    response.headers["Cache-Control"] = "no-store"
+    return ContextResponse(
+        status="found"
+        if result.outcome is ContextOutcome.FOUND
+        else "no_authorized_evidence",
+        items=[
+            ContextItemResponse(
+                document_id=item.document_id,
+                version_id=item.version_id,
+                version_number=item.version_number,
+                source=item.source,
+                fragment=item.fragment,
+                start=item.start,
+                end=item.end,
+                score=item.score,
+                text=item.text,
+            )
+            for item in result.items
+        ],
+        truncated=result.truncated,
     )

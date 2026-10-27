@@ -9,9 +9,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 from sqlalchemy.engine import RowMapping
 
-from app.api.memory import NOT_AVAILABLE, UNAUTHORIZED, derive_version_id
+from app.api.memory import NOT_AVAILABLE, UNAUTHORIZED
 from app.application.identity import Principal
 from app.config import Settings
+from app.domain.versions import derive_version_id
 from app.persistence import schema
 from app.persistence.credentials import (
     CredentialAuthenticator,

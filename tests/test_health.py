@@ -38,6 +38,7 @@ def test_openapi_describes_health_contract(client: TestClient) -> None:
         "/health",
         "/memory/projects/{project_id}/documents/{document_id}/versions",
         "/memory/projects/{project_id}/documents/{document_id}/versions/{version_id}",
+        "/memory/projects/{project_id}/context",
     }
     response_schema = schema["paths"]["/health"]["get"]["responses"]["200"]["content"][
         "application/json"

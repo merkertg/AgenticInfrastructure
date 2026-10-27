@@ -3,6 +3,7 @@
 from app.domain.models import (
     AccessDecision,
     AccessRequest,
+    Action,
     Agent,
     Company,
     Delegation,
@@ -12,7 +13,104 @@ from app.domain.models import (
     Grant,
     Project,
     ReasonCode,
+    ScopeRequest,
 )
+
+
+def _scope_denial(
+    *,
+    company_id: str,
+    project_id: str,
+    employee_id: str,
+    agent_id: str,
+    action: Action,
+    company: Company | None,
+    project: Project | None,
+    employee: Employee | None,
+    agent: Agent | None,
+    delegation: Delegation | None,
+) -> ReasonCode | None:
+    """Return the first company, actor or delegation failure, or None if in scope."""
+    if company is None or not company.active:
+        return ReasonCode.COMPANY_UNAVAILABLE
+    if company.id != company_id:
+        return ReasonCode.COMPANY_MISMATCH
+
+    if project is None or not project.active:
+        return ReasonCode.PROJECT_UNAVAILABLE
+    if project.id != project_id:
+        return ReasonCode.PROJECT_MISMATCH
+    if project.company_id != company.id:
+        return ReasonCode.COMPANY_MISMATCH
+
+    if employee is None or not employee.active or employee.id != employee_id:
+        return ReasonCode.EMPLOYEE_UNAVAILABLE
+    if employee.company_id != company.id:
+        return ReasonCode.COMPANY_MISMATCH
+
+    if agent is None or not agent.active or agent.id != agent_id:
+        return ReasonCode.AGENT_UNAVAILABLE
+    if agent.company_id != company.id:
+        return ReasonCode.COMPANY_MISMATCH
+    if agent.employee_id != employee.id:
+        return ReasonCode.AGENT_EMPLOYEE_MISMATCH
+
+    if delegation is None or not delegation.active:
+        return ReasonCode.DELEGATION_UNAVAILABLE
+    if delegation.company_id != company.id:
+        return ReasonCode.COMPANY_MISMATCH
+    if delegation.project_id != project.id:
+        return ReasonCode.PROJECT_MISMATCH
+    if delegation.employee_id != employee.id or delegation.agent_id != agent.id:
+        return ReasonCode.DELEGATION_MISMATCH
+    if action not in delegation.actions:
+        return ReasonCode.ACTION_NOT_DELEGATED
+    return None
+
+
+def _check_snapshot_types(
+    pairs: tuple[tuple[object, type], ...],
+) -> None:
+    """Reject snapshot entries whose runtime type differs from the declared entity."""
+    for value, expected in pairs:
+        if value is not None and not isinstance(value, expected):
+            raise TypeError("snapshot entries must have their declared entity types")
+
+
+def evaluate_scope(
+    request: ScopeRequest,
+    *,
+    company: Company | None,
+    project: Project | None,
+    employee: Employee | None,
+    agent: Agent | None,
+    delegation: Delegation | None,
+) -> ReasonCode:
+    """Check project-wide access before any document of the project is considered."""
+    if not isinstance(request, ScopeRequest):
+        raise TypeError("request must be a ScopeRequest")
+    _check_snapshot_types(
+        (
+            (company, Company),
+            (project, Project),
+            (employee, Employee),
+            (agent, Agent),
+            (delegation, Delegation),
+        )
+    )
+    denial = _scope_denial(
+        company_id=request.company_id,
+        project_id=request.project_id,
+        employee_id=request.employee_id,
+        agent_id=request.agent_id,
+        action=request.action,
+        company=company,
+        project=project,
+        employee=employee,
+        agent=agent,
+        delegation=delegation,
+    )
+    return ReasonCode.ALLOWED if denial is None else denial
 
 
 def evaluate_access(
@@ -30,17 +128,17 @@ def evaluate_access(
     """Check the supplied snapshot without reading content or proving actor identity."""
     if not isinstance(request, AccessRequest):
         raise TypeError("request must be an AccessRequest")
-    for value, expected in (
-        (company, Company),
-        (project, Project),
-        (employee, Employee),
-        (agent, Agent),
-        (delegation, Delegation),
-        (document, Document),
-        (version, DocumentVersion),
-    ):
-        if value is not None and not isinstance(value, expected):
-            raise TypeError("snapshot entries must have their declared entity types")
+    _check_snapshot_types(
+        (
+            (company, Company),
+            (project, Project),
+            (employee, Employee),
+            (agent, Agent),
+            (delegation, Delegation),
+            (document, Document),
+            (version, DocumentVersion),
+        )
+    )
     if not isinstance(grants, tuple) or any(
         not isinstance(grant, Grant) for grant in grants
     ):
@@ -52,40 +150,22 @@ def evaluate_access(
         """Keep a refusal tied to the evaluated request without document contents."""
         return AccessDecision(request=request, allowed=False, reason=reason)
 
-    if company is None or not company.active:
-        return deny(ReasonCode.COMPANY_UNAVAILABLE)
-    if company.id != request.company_id:
-        return deny(ReasonCode.COMPANY_MISMATCH)
-
-    if project is None or not project.active:
-        return deny(ReasonCode.PROJECT_UNAVAILABLE)
-    if project.id != request.project_id:
-        return deny(ReasonCode.PROJECT_MISMATCH)
-    if project.company_id != company.id:
-        return deny(ReasonCode.COMPANY_MISMATCH)
-
-    if employee is None or not employee.active or employee.id != request.employee_id:
-        return deny(ReasonCode.EMPLOYEE_UNAVAILABLE)
-    if employee.company_id != company.id:
-        return deny(ReasonCode.COMPANY_MISMATCH)
-
-    if agent is None or not agent.active or agent.id != request.agent_id:
-        return deny(ReasonCode.AGENT_UNAVAILABLE)
-    if agent.company_id != company.id:
-        return deny(ReasonCode.COMPANY_MISMATCH)
-    if agent.employee_id != employee.id:
-        return deny(ReasonCode.AGENT_EMPLOYEE_MISMATCH)
-
-    if delegation is None or not delegation.active:
-        return deny(ReasonCode.DELEGATION_UNAVAILABLE)
-    if delegation.company_id != company.id:
-        return deny(ReasonCode.COMPANY_MISMATCH)
-    if delegation.project_id != project.id:
-        return deny(ReasonCode.PROJECT_MISMATCH)
-    if delegation.employee_id != employee.id or delegation.agent_id != agent.id:
-        return deny(ReasonCode.DELEGATION_MISMATCH)
-    if request.action not in delegation.actions:
-        return deny(ReasonCode.ACTION_NOT_DELEGATED)
+    denial = _scope_denial(
+        company_id=request.company_id,
+        project_id=request.project_id,
+        employee_id=request.employee_id,
+        agent_id=request.agent_id,
+        action=request.action,
+        company=company,
+        project=project,
+        employee=employee,
+        agent=agent,
+        delegation=delegation,
+    )
+    if denial is not None:
+        return deny(denial)
+    # The scope check above guarantees these entities are present.
+    assert company is not None and project is not None and employee is not None
 
     if document is None or not document.active:
         return deny(ReasonCode.DOCUMENT_UNAVAILABLE)

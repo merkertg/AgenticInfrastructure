@@ -220,3 +220,56 @@ write_requests = Table(
     CheckConstraint("result_version_number BETWEEN 1 AND 1000000", name="number_range"),
     CheckConstraint("fingerprint ~ '^[a-f0-9]{64}$'", name="sha256_fingerprint"),
 )
+
+context_requests = Table(
+    "context_requests",
+    metadata,
+    Column("request_id", String(128), primary_key=True),
+    Column("company_id", String(128), nullable=False),
+    Column("project_id", String(128), nullable=False),
+    Column("employee_id", String(128), nullable=False),
+    Column("agent_id", String(128), nullable=False),
+    Column("credential_id", String(128), nullable=True),
+    # The query text is not stored; its digest and term count allow correlation.
+    Column("query_sha256", String(64), nullable=False),
+    Column("query_terms", Integer, nullable=False),
+    Column("max_items", Integer, nullable=False),
+    Column("allowed", Boolean, nullable=False),
+    Column("reason", String(64), nullable=False),
+    Column("result", String(32), nullable=False),
+    Column("returned_items", Integer, nullable=False),
+    Column("truncated", Boolean, nullable=False),
+    Column("occurred_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint("allowed = (reason = 'allowed')", name="consistent_authorization"),
+    CheckConstraint(
+        "result IN ('found', 'no_authorized_evidence', 'denied')",
+        name="supported_result",
+    ),
+    CheckConstraint("query_sha256 ~ '^[a-f0-9]{64}$'", name="sha256_query"),
+    CheckConstraint("returned_items BETWEEN 0 AND 10", name="returned_items_range"),
+)
+
+context_items = Table(
+    "context_items",
+    metadata,
+    Column(
+        "request_id",
+        String(128),
+        ForeignKey("context_requests.request_id"),
+        primary_key=True,
+    ),
+    Column("position", Integer, primary_key=True),
+    Column("company_id", String(128), nullable=False),
+    Column("document_id", String(128), nullable=False),
+    Column("version_id", String(128), nullable=False),
+    Column("fragment_ordinal", Integer, nullable=False),
+    Column("start_offset", Integer, nullable=False),
+    Column("end_offset", Integer, nullable=False),
+    ForeignKeyConstraint(
+        ["company_id", "document_id", "version_id"],
+        ["versions.company_id", "versions.document_id", "versions.id"],
+    ),
+    CheckConstraint(
+        "start_offset >= 0 AND end_offset > start_offset", name="valid_span"
+    ),
+)

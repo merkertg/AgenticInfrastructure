@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy import Connection, Engine, insert, select
 
 from app.application.identity import Principal
-from app.domain.models import AccessRequest
+from app.domain.models import AccessRequest, ScopeRequest
 from app.persistence import schema as db
 
 TOKEN_PREFIX = "aik1_"
@@ -76,7 +76,7 @@ def issue_credential(
 
 def credential_is_current(
     connection: Connection,
-    request: AccessRequest,
+    request: AccessRequest | ScopeRequest,
     credential_id: str,
     at: datetime,
 ) -> bool:

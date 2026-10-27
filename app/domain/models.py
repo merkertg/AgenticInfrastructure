@@ -261,6 +261,28 @@ class AccessRequest:
 
 
 @dataclass(frozen=True, slots=True)
+class ScopeRequest:
+    """Describe a project-wide attempt, such as a search, without a target document."""
+
+    request_id: str
+    company_id: str
+    project_id: str
+    employee_id: str
+    agent_id: str
+    action: Action
+
+    def __post_init__(self) -> None:
+        """Require valid scope identifiers and an explicit supported action."""
+        _validate_id(self.request_id, "request_id")
+        _validate_id(self.company_id, "company_id")
+        _validate_id(self.project_id, "project_id")
+        _validate_id(self.employee_id, "employee_id")
+        _validate_id(self.agent_id, "agent_id")
+        if not isinstance(self.action, Action):
+            raise TypeError("action must be an Action member")
+
+
+@dataclass(frozen=True, slots=True)
 class AccessDecision:
     """Bind a validated decision and its reason to the exact evaluated request."""
 

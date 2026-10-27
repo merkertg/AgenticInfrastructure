@@ -10,20 +10,27 @@ app/
   demo.py              # deterministic fictional offline policy cases
   persistence_demo.py  # fictional PostgreSQL scenario
   credential_lab.py    # guarded issuance of fictional lab agent credentials
+  intake_lab.py        # guarded all-or-nothing import of fictional text files
   api/
-    memory.py          # authenticated memory routes and request/response schemas
+    memory.py          # authenticated memory and context routes and schemas
   domain/
     models.py          # validated immutable objects, actions and reason codes
     policy.py          # deterministic access decisions on supplied objects
     audit.py           # audit-attempt model and explicit-time construction
+    text.py            # intake text format and located fragments
+    retrieval.py       # query rules, BM25 ranking and context budgets
+    versions.py        # deterministic version identifiers
   application/
     memory.py          # result contract for memory operations
     identity.py        # authenticated principal derived from a credential
+    context.py         # context-search result contract
   persistence/
     database.py        # PostgreSQL engine and migration helpers
     schema.py          # SQLAlchemy Core tables and relational constraints
     memory.py          # transactional reads, appends, audit and write replay
     credentials.py     # hashed bearer credentials, authentication and recheck
+    context.py         # authorized candidate loading and context history
+    intake.py          # validated all-or-nothing document intake
     lab.py             # guarded fictional bootstrap for a local lab
 tests/
   conftest.py          # isolated configuration and test client
@@ -36,6 +43,7 @@ migrations/
   env.py               # Alembic migration environment
   versions/            # versioned schema changes
 alembic.ini
+fixtures/lab/          # invented UTF-8 texts for the intake and search lab
 scripts/
   check_docs.py        # local Markdown target checks
 docs/
@@ -43,6 +51,7 @@ docs/
   STAGE_02.md          # detailed Russian domain and policy guide
   STAGE_03.md          # detailed Russian persistence and transaction guide
   STAGE_04.md          # detailed Russian identity and memory API guide
+  STAGE_05.md          # detailed Russian intake and context search guide
   ROADMAP.md           # stage boundaries and acceptance criteria
   APPROACH.md          # intended product and architecture
   CI_CD.md             # configured checks and delivery limits
@@ -75,6 +84,10 @@ The memory HTTP path is `Authorization: Bearer → CredentialAuthenticator →
 Principal → AccessRequest → MemoryStore (credential recheck under the company
 lock) → evaluate_access() → audit → commit → JSON`. Denials return one uniform
 `404`; storage and audit failures return `503`.
+
+The context path is `Principal → ScopeRequest → MemoryStore.search_context()
+(company lock, credential recheck, evaluate_scope(), readable versions,
+fragments, BM25, final evaluate_access()) → context history → commit → JSON`.
 
 The offline path is `AccessRequest + supplied objects → evaluate_access() →
 AccessDecision → make_audit_event(decision, occurred_at=...)`. It neither returns

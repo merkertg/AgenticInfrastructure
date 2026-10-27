@@ -73,4 +73,5 @@ revocation committed after authentication denies the operation with
 No rate limiting, lockout, failed-login history, credential management API,
 document listing or latest-version lookup exists yet. Credential issuance is
 privileged lab setup. A stolen token acts as its agent until expiry or
-revocation. Search and context assembly belong to Stage 05.
+revocation. Use [context search](context-search.md) to find passages and their
+version IDs.

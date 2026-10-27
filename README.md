@@ -9,8 +9,9 @@ The project implements the **shared memory** alternative of the
 `#AgenticInfrastructure` assignment. Agent discovery, task exchange and a general
 corporate automation platform are outside the current roadmap.
 
-**Current implementation: Stages 01–04 — API foundation, access policy,
-PostgreSQL persistence and authenticated memory routes.** The pure Python domain
+**Current implementation: Stages 01–05 — API foundation, access policy,
+PostgreSQL persistence, authenticated memory routes and permission-filtered
+context search.** The pure Python domain
 models companies, employees, delegated agents, documents, versions and grants.
 The storage adapter reads existing versions, appends new versions and commits
 operation audit metadata and write-replay records transactionally. Agents call
@@ -18,8 +19,10 @@ two HTTP memory routes with server-issued bearer credentials; the server derives
 the employee from the agent registration, never from request fields. Actual
 check results and publication state belong to [verification](docs/VERIFICATION.md).
 
-All data is fictional laboratory data. Search, document intake, agent tools and
-corporate connectors are **planned**. The health service and offline policy demo
+Agents can also search a project for ranked passages from documents they may
+read now; trusted lab setup imports fictional UTF-8 text documents. All data is
+fictional laboratory data. Agent tools, a model provider and corporate
+connectors are **planned**. The health service and offline policy demo
 need no database; memory routes, the persistence demo and integration tests need
 PostgreSQL. No model provider or corporate credentials are required.
 
@@ -135,6 +138,24 @@ The store rechecks the credential under the company lock before acting. See the
 [detailed Stage 04 guide](docs/STAGE_04.md). This is a learning credential
 scheme, not corporate SSO; bearer tokens need TLS outside loopback.
 
+## Document intake and context search
+
+```bash
+uv run --locked python -m app.intake_lab --project finance --grant fin-user:read fixtures/lab/finance/*.txt
+curl -s -X POST -H "Authorization: Bearer $FIN_TOKEN" \
+  -H "Content-Type: application/json" -d '{"query":"travel limit receipt"}' \
+  http://127.0.0.1:8005/memory/projects/finance/context
+```
+
+Intake accepts strict UTF-8 plain text with explicit size and character limits
+and imports a batch all or nothing. Search authorizes the project and each
+document before ranking, ranks only readable fragments with deterministic BM25,
+rechecks the selected documents and returns at most 10 passages with document,
+version and character-offset references. A search without readable matches
+returns `no_authorized_evidence`. History stores references and a query hash,
+not text. See the [context search instructions](docs/instructions/context-search.md)
+and the [detailed Stage 05 guide](docs/STAGE_05.md).
+
 ## Verify
 
 ```bash
@@ -168,8 +189,9 @@ including revoked grants, and cite the document versions it used.
 
 Stage 02 checks policy on immutable in-memory objects. Stage 03 loads stored
 policy objects and preserves version appends and audit history in PostgreSQL.
-Stage 04 lets authenticated agents read and append versions over HTTP. Search,
-context assembly and source synchronization remain future stages.
+Stage 04 lets authenticated agents read and append versions over HTTP. Stage 05
+adds permission-filtered context search with verifiable references. Agent tools
+and source synchronization remain future stages.
 
 ## Documentation
 
@@ -177,6 +199,7 @@ context assembly and source synchronization remain future stages.
 - [Detailed Stage 02 guide in Russian](docs/STAGE_02.md)
 - [Detailed Stage 03 guide in Russian](docs/STAGE_03.md)
 - [Detailed Stage 04 guide in Russian](docs/STAGE_04.md)
+- [Detailed Stage 05 guide in Russian](docs/STAGE_05.md)
 - [Roadmap and completion criteria in Russian](docs/ROADMAP.md)
 - [Approach and boundaries](docs/APPROACH.md)
 - [Quickstart](docs/instructions/quickstart.md), [API usage](docs/instructions/usage.md),
@@ -188,6 +211,8 @@ context assembly and source synchronization remain future stages.
   [transaction decision](docs/adr/0003-postgresql-memory-audit.md)
 - [Memory API instructions](docs/instructions/memory-api.md) and
   [credential decision](docs/adr/0004-agent-credentials-memory-api.md)
+- [Context search instructions](docs/instructions/context-search.md) and
+  [retrieval decision](docs/adr/0005-permission-filtered-context.md)
 - [Development log](docs/DEVELOPMENT_LOG.md) and [verification](docs/VERIFICATION.md)
 - [Learning guide index](docs/guide/README.md)
 

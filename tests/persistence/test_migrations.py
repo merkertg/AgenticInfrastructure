@@ -23,8 +23,11 @@ EXPECTED_TABLES = {
     "grants",
     "audit_events",
     "write_requests",
+    "context_requests",
+    "context_items",
     "alembic_version",
 }
+CONTEXT_TABLES = {"context_requests", "context_items"}
 
 
 def test_migration_creates_expected_tables(engine: Engine) -> None:
@@ -70,7 +73,8 @@ def test_credential_revision_downgrades_to_initial_schema(
             command.downgrade(configuration, "0001_initial")
         inspector = inspect(engine)
         assert set(inspector.get_table_names()) == EXPECTED_TABLES - {
-            "agent_credentials"
+            "agent_credentials",
+            *CONTEXT_TABLES,
         }
         audit_columns = {
             column["name"] for column in inspector.get_columns("audit_events")
@@ -80,8 +84,26 @@ def test_credential_revision_downgrades_to_initial_schema(
         migrate(postgres_url)
     with engine.connect() as connection:
         revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
-    assert revision == "0002_agent_credentials"
+    assert revision == "0003_context_history"
     audit_columns = {
         column["name"] for column in inspect(engine).get_columns("audit_events")
     }
     assert "credential_id" in audit_columns
+
+
+def test_context_revision_downgrades_to_credential_schema(
+    engine: Engine, postgres_url: str
+) -> None:
+    """Reverting Stage 05 removes only the context-history tables."""
+    configuration = Config(str(ROOT / "alembic.ini"))
+    configuration.set_main_option("script_location", str(ROOT / "migrations"))
+    try:
+        with engine.begin() as connection:
+            configuration.attributes["connection"] = connection
+            command.downgrade(configuration, "0002_agent_credentials")
+        assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES - (
+            CONTEXT_TABLES
+        )
+    finally:
+        migrate(postgres_url)
+    assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES

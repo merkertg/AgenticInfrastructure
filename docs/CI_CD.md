@@ -10,7 +10,8 @@ unit tests, local documentation links and whitespace. The PostgreSQL integration
 step uses a disposable PostgreSQL 17 service and an explicit local test URL. It
 applies and exercises the migration-backed persistence path, including version
 conflicts, request replay and audit rollback, and the authenticated memory HTTP
-routes through an in-process client on the same database. The two suites are distinct:
+routes, document intake and context search through an in-process client on
+the same database. The two suites are distinct:
 skipped database tests in a unit run do not establish PostgreSQL behavior.
 
 The workflow has read-only repository permissions and does not deploy a service,

@@ -102,6 +102,24 @@ delegation. Unauthenticated requests receive one uniform `401` and are not
 business-audited. The server derives new version IDs and `agent:<id>`
 provenance. See [ADR 0004](adr/0004-agent-credentials-memory-api.md).
 
+Stage 05 adds trusted plain-text intake and context search:
+
+```text
+POST /memory/projects/{project}/context + bearer token
+        ↓
+company lock → credential recheck → evaluate_scope()
+        ↓
+readable documents → evaluate_access() → load authorized text only
+        ↓
+fragments → BM25 over authorized fragments → bounded selection
+        ↓
+evaluate_access() again → context history → commit → items or explicit empty
+```
+
+Fragments are computed per request from the latest active version, so no
+derived index or cache can outlive a revocation. History stores references and
+a query digest, not text. See [ADR 0005](adr/0005-permission-filtered-context.md).
+
 ## Architecture and remaining stages
 
 Grow a modular monolith as working behavior appears:
@@ -112,7 +130,7 @@ Grow a modular monolith as working behavior appears:
 | Application | Implemented memory result contract and authenticated principal | 03–04 |
 | Persistence | Implemented PostgreSQL versions, grants, credentials, write replay and audit | 03–04 |
 | Identity and API | Implemented agent bearer credentials and scoped memory version routes | 04 |
-| Retrieval | Bounded ingestion, permission-filtered search and context provenance | 05 |
+| Retrieval | Implemented bounded intake, permission-filtered search and context provenance | 05 |
 | Agent tool | Bounded context reads through existing application operations | 06 |
 | Corporate adapter | One read-only source, permission synchronization and revocation | 07 |
 | Delivery | Containers, integration evaluations and operating instructions | 08 |
