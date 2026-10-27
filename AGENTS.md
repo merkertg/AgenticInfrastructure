@@ -23,6 +23,12 @@
 - Use English for code, purpose docstrings, README, short instructions,
   architecture documents, ADRs and commit messages. Use accessible Russian for
   stage guides, the roadmap, development log and verification report.
+- Match the sibling AI Support Agent documentation layout: a short README with
+  roadmap and documentation index; five task-oriented English instructions;
+  detailed Russian stage and CI/CD guides; English approach and ADRs.
+- Keep the illustrated Russian PDF and its rebuild instructions in `docs/guide/`.
+  Rebuild with the optional locked `guide` group after changing its generator
+  or printed facts, then render and inspect every page.
 - Explain every new function's purpose. Update the guide, development log,
   verification report and `docs/guide/verification.json` with each stage.
 - Run pytest, Ruff lint and format checks, strict mypy, documentation link

@@ -1,27 +1,55 @@
-# CI and delivery
+# CI/CD и публикация Agentic Infrastructure
 
-[README](../README.md) · [Local results](VERIFICATION.md)
+[← README](../README.md) · [Короткая инструкция](instructions/ci-and-delivery.md) · [Фактические проверки](VERIFICATION.md)
 
-The [workflow](../.github/workflows/ci.yml) runs on pushes to `main`,
-pull requests targeting `main`, and manual dispatch. Stages are published
-directly to `main`; the former `develop` branch was removed on 2026-10-27. It installs Python
-3.12 and uv, synchronizes `uv.lock`, then checks lint, formatting, strict types,
-unit tests, local documentation links and whitespace. The PostgreSQL integration
-step uses a disposable PostgreSQL 17 service and an explicit local test URL. It
-applies and exercises the migration-backed persistence path, including version
-conflicts, request replay and audit rollback, and the authenticated memory HTTP
-routes, document intake and context search through an in-process client on
-the same database. The two suites are distinct:
-skipped database tests in a unit run do not establish PostgreSQL behavior.
+## Что запускает pipeline
 
-The workflow has read-only repository permissions and does not deploy a service,
-publish a package, build a container or access corporate credentials. Exact
-action revisions are pinned. Dependency versions are pinned in `uv.lock`.
-The initial resolution uses a fixed two-week release cutoff of
-`2026-10-10T00:00:00Z`; this reduces immediate adoption of new releases and does
-not replace vulnerability review or a future dependency update policy.
+[Workflow](../.github/workflows/ci.yml) запускается при push в `main`, для pull
+request в `main` и вручную. С 27 октября 2026 года этапы публикуются прямо в
+`main`; прежняя `develop` удалена. Workflow устанавливает Python 3.12 и uv,
+затем зависимости из точного `uv.lock`.
 
-A configured PostgreSQL service or workflow is not evidence of a successful run.
-Check the
-actual commit and run conclusion before calling CI verified. Publication and
-GitHub Actions evidence are recorded separately in the verification report.
+| Шаг | Что он проверяет |
+| --- | --- |
+| `uv sync --locked` | Соответствие зависимостей зафиксированному lock |
+| `ruff check .` | Ошибки и согласованный стиль Python |
+| `ruff format --check .` | Форматирование без изменения файлов |
+| `mypy app tests scripts migrations` | Строгие типы приложения, тестов и служебного кода |
+| `pytest -m 'not postgres'` | HTTP-контракты, предметные правила и генераторные данные без БД |
+| `pytest -m postgres` | Реальные миграции, версии, аудит, повторы, токены, приём и поиск на PostgreSQL 17 |
+| `python scripts/check_docs.py` | Существование локальных ссылок Markdown |
+| `uv lock --check --offline` | Согласованность lock без нового разрешения версий |
+| `git diff --check` | Ошибки пробелов в изменениях |
+
+PostgreSQL поднимается отдельным временным сервисом. Его `TEST_DATABASE_URL`
+указывает только на одноразовую локальную базу с именем, оканчивающимся на
+`_test`. Пропуск таких тестов при отсутствии URL в обычном запуске не означает,
+что работа с БД проверена. Подробные команды — в
+[инструкции тестирования](instructions/testing.md).
+
+## Что публикуется сейчас
+
+Workflow имеет только права чтения репозитория. Он не развёртывает сервис,
+не собирает контейнеры, не публикует пакет и не обращается к корпоративным
+источникам. PDF пересобирается локально по [инструкции](guide/README.md).
+Контейнерный выпуск относится к будущему этапу 08.
+
+Actions закреплены точными ревизиями, Python-пакеты — `uv.lock`. Обычный
+порог новых выпусков задан в `pyproject.toml`; он снижает скорость принятия
+новых версий, но не заменяет проверку уязвимостей.
+
+## Как опубликовать проверенный результат
+
+1. Выполни локальные проверки и обнови журнал, отчёт и `verification.json`.
+2. Проверь staged diff: только относящиеся к задаче файлы, без `.env`, токенов,
+   локальных документов, временных отчётов и копий PDF.
+3. Создай commit с английским сообщением. Получи актуальную `origin/main` и
+   убедись, что она является предком нового commit. При расхождении сначала
+   согласуй историю, не теряя чужую работу.
+4. Выполни обычный push без force. Через `git ls-remote` отдельно подтверди,
+   что удалённая `main` указывает на тот же SHA.
+5. Найди запуск Actions именно для этого SHA и дождись итогового conclusion,
+   если нужно подтвердить удалённый CI. До этого статус — `not_verified`.
+
+Локальный успех, опубликованный commit, совпадение удалённого SHA и зелёный
+Actions — отдельные факты. [Отчёт](VERIFICATION.md) хранит их раздельно.

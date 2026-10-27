@@ -23,9 +23,16 @@ dev = [
     "ruff>=0.16.10,<0.17",
 ]
 
+guide = ["reportlab==4.4.9", "pillow>=13.0.0,<14"]
+
 [tool.uv]
 # Reuse the portfolio's two-week release cutoff; uv.lock pins exact versions.
 exclude-newer = "2026-10-10T00:00:00Z"
+
+# Narrow security exception for the PDF-only Pillow dependency.
+# https://github.com/python-pillow/Pillow/releases/tag/13.0.0
+[tool.uv.exclude-newer-package]
+pillow = "2026-10-17T00:00:00Z"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -45,3 +52,12 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 strict = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["reportlab", "reportlab.*"]
+ignore_missing_imports = true
+
+# Guide flowables subclass ReportLab classes, which mypy sees as Any.
+[[tool.mypy.overrides]]
+module = ["scripts.build_guide"]
+disallow_subclassing_any = false

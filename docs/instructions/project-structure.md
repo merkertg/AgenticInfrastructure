@@ -1,6 +1,6 @@
 # Project structure
 
-[README](../../README.md) · [Approach](../APPROACH.md)
+[← README](../../README.md) · [All documentation](../../README.md#documentation) · [Approach](../APPROACH.md)
 
 ```text
 app/
@@ -46,6 +46,8 @@ alembic.ini
 fixtures/lab/          # invented UTF-8 texts for the intake and search lab
 scripts/
   check_docs.py        # local Markdown target checks
+  guide_data.py        # validated verification facts, independent of ReportLab
+  build_guide.py       # explicit CLI for the illustrated Russian PDF guide
 docs/
   STAGE_01.md          # detailed Russian learning guide
   STAGE_02.md          # detailed Russian domain and policy guide
@@ -59,7 +61,7 @@ docs/
   VERIFICATION.md      # observed results and limits
   adr/                # architecture decisions
   instructions/       # short English instructions
-  guide/              # verification data and guide index
+  guide/              # illustrated PDF, verification data and rebuild instructions
 .github/workflows/ci.yml
 .env.example
 .python-version
@@ -72,7 +74,7 @@ README.md
 `app/domain` uses standard Python types and has no web, database, configuration
 or model SDK dependencies. The demo composes its objects without importing
 `app.main` or reading application settings. PostgreSQL persistence can be called
-by trusted Python code or by the authenticated HTTP routes. Retrieval, agent
+by trusted Python code or by the authenticated HTTP routes. Permission-filtered lexical retrieval is implemented; agent
 runtime and connectors remain future stages.
 
 The liveness path is `client → Uvicorn → FastAPI → health() → HealthResponse → JSON`.

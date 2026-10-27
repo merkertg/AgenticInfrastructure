@@ -1,6 +1,6 @@
 # Testing
 
-[README](../../README.md) · [Verification report](../VERIFICATION.md)
+[← README](../../README.md) · [All documentation](../../README.md#documentation) · [Verification report](../VERIFICATION.md)
 
 Run from the repository root after installing locked development dependencies:
 
@@ -33,7 +33,7 @@ uv run --locked python -m app.demo
 ```
 
 These checks exercise the HTTP foundation, offline policy and input validation.
-The [domain instructions](domain.md) explain the offline contract. Database
+The [domain instructions](usage.md#offline-domain-and-access-policy) explain the offline contract. Database
 behavior requires a separate actual PostgreSQL run:
 
 ```bash
@@ -56,7 +56,7 @@ before ranking, score independence from unreadable documents, explicit empty
 results, revocation and deletion between searches, new and inactive versions,
 other projects and companies, embedded instructions, revocation after ranking,
 search limits and context-history failure. Domain tests cover the text format,
-fragment offsets, query rules, deterministic ranking and project scope. The [persistence guide](persistence.md) describes local setup.
+fragment offsets, query rules, deterministic ranking and project scope. The [persistence guide](usage.md#postgresql-persistence) describes local setup.
 
 Neither suite establishes production identity integration, semantic retrieval
 quality, corporate source behavior or LLM behavior. A process reconnection and a real
@@ -66,7 +66,7 @@ which was actually performed.
 For an actual HTTP smoke check, start the development server from
 [quickstart](quickstart.md). Expect `200` for `/health`, `/docs`, `/redoc` and
 `/openapi.json`; expect `404` for `/`, `/memory` and `/agents`, and `405` for
-`POST /health`. For memory routes, follow [memory API usage](memory-api.md)
+`POST /health`. For memory routes, follow [memory API usage](usage.md#authenticated-memory-api)
 with a lab database and issued credentials. A restricted runtime may block local sockets independently of
 application behavior; record that restriction instead of reporting a successful
 network smoke check.
@@ -74,3 +74,18 @@ network smoke check.
 `scripts/check_docs.py` checks that inline Markdown links resolve to existing
 local repository targets. It skips external URLs, anchors and fenced code;
 it does not validate external pages or Markdown anchor correctness.
+
+## Illustrated guide
+
+Guide-data tests run with the ordinary suite and need no ReportLab. To rebuild
+the PDF, explicitly install the optional guide group:
+
+```bash
+uv sync --locked --group guide
+uv run --locked --group guide python -m scripts.build_guide
+```
+
+Inspect rendered pages as described in [the guide index](../guide/README.md).
+The PDF uses the historical Stage 05 application checks and a separate record of
+the documentation update, so skipped database tests never become a new database
+verification.

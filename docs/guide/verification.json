@@ -6,7 +6,9 @@
   "revision": {
     "branch": "main",
     "base_commit": "2e229dce0d4f4ae2895c37dd2cc2a7359e359a75",
-    "state": "verified_working_tree_before_commit"
+    "code_commit": "a83bd3c542aad0fc469f967f0a2561b9ae2bfe17",
+    "state": "published_code_commit",
+    "note": "Local checks ran on the working tree that became the code commit; publication evidence and the documentation restructure follow in a later documentation commit without application changes."
   },
   "runtime": {
     "python": "3.12.15",
@@ -243,10 +245,18 @@
       ]
     },
     "stage_05": {
-      "status": "not_published_at_local_check",
+      "status": "published",
+      "commit": "a83bd3c542aad0fc469f967f0a2561b9ae2bfe17",
       "branch": "main",
-      "remote_ref": "not_verified",
-      "github_actions": "not_verified"
+      "remote_ref": "verified",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40424738428,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40424738428",
+        "postgres_step": "success",
+        "test_counts_in_ci_log": "not_verified"
+      }
     }
   },
   "previous_stages": {
@@ -903,5 +913,58 @@
     "Bearer tokens impersonate their agent until expiry or revocation; loopback HTTP only.",
     "Database owners can modify documents, grants, credentials and history directly.",
     "PostgreSQL temporary native lab is not a deployed service."
-  ]
+  ],
+  "documentation_update": {
+    "checked_at": "2026-10-27T05:26:09+05:00",
+    "timezone": "Asia/Yekaterinburg",
+    "base_commit": "a83bd3c542aad0fc469f967f0a2561b9ae2bfe17",
+    "scope": "Align documentation with AI Support Agent; integrate the existing illustrated Russian PDF generator; no application behavior or database schema changes.",
+    "guide_note": "Обновление документации 27.10.2026: 243 passed, 99 skipped без TEST_DATABASE_URL; strict mypy 64 файла, Ruff и ссылки проверены. PostgreSQL и сетевой сценарий повторно не запускались; их результаты ниже исторические. CI нового commit — not_verified. Таблица публикаций хранит прежние записи; сейчас перепроверен только удалённый SHA этапа 05.",
+    "checks": {
+      "pytest": {
+        "passed": 243,
+        "skipped": 99,
+        "postgres_rerun": false
+      },
+      "ruff_check": "passed",
+      "ruff_format": {
+        "status": "passed",
+        "files": 88
+      },
+      "mypy": {
+        "status": "passed",
+        "source_files": 64
+      },
+      "documentation_links": {
+        "status": "passed",
+        "local_links": 168,
+        "markdown_files": 23
+      },
+      "lock_check": "passed",
+      "whitespace": "passed",
+      "pdf": {
+        "status": "passed",
+        "language": "ru",
+        "pages": 12,
+        "visual_review": "all pages rendered and inspected; long machine identifiers formatted as separate lines",
+        "text_extraction": "passed"
+      }
+    },
+    "lock": {
+      "sha256": "0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974",
+      "runtime_resolution_unchanged": true,
+      "new_guide_packages": {
+        "reportlab": "4.4.9",
+        "pillow": "13.0.0",
+        "charset-normalizer": "3.5.2"
+      },
+      "pillow_cutoff_exception": "2026-10-17T00:00:00Z"
+    },
+    "publication": {
+      "branch": "main",
+      "base_remote_ref": "verified",
+      "github_actions": "not_verified",
+      "note": "Stage 05 CI evidence above was already present in the unfinished documentation and was not revalidated during this documentation update."
+    }
+  }
 }
