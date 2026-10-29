@@ -302,3 +302,14 @@ Actions нового commit не объявляется проверенным �
 Подробный разбор — в [STAGE_06.md](STAGE_06.md), команды —
 в [инструкции](instructions/usage.md#agent-answers), результаты —
 в [отчёте](VERIFICATION.md). Публикация этапа 06 ожидает решения пользователя.
+
+## 2026-10-29 — Публикация этапа 06
+
+По указанию пользователя «Commit and push» изменения этапа оформлены commit
+`fdb19b19851193a012a024400fe7524d60ea7bd0` (`feat: add stage 06 bounded agent context tool`)
+и отправлены в `origin/main`. Перед этим `git fetch` подтвердил, что локальная
+и удалённая `main` совпадали на `344aaee`. `git ls-remote` после push показал
+тот же SHA. GitHub Actions проверен отдельно через GitHub API:
+[запуск 40796064293](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40796064293) для этого SHA завершён с `completed / success`,
+все шаги, включая PostgreSQL-тесты, — `success`. Число тестов в журнале CI
+не читалось: загрузка журнала требует авторизации.

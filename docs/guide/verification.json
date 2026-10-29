@@ -6,8 +6,9 @@
   "revision": {
     "branch": "main",
     "base_commit": "344aaeef2deddb66fa2a27359cd85f8b2f34524f",
-    "state": "uncommitted_working_tree",
-    "note": "Local checks ran on the working tree on top of the base commit; the stage commit, push and CI follow only after the user's decision."
+    "state": "published_code_commit",
+    "note": "Local checks ran on the working tree that became the code commit; publication evidence follows in a later documentation commit without application changes.",
+    "code_commit": "fdb19b19851193a012a024400fe7524d60ea7bd0"
   },
   "runtime": {
     "python": "3.12.15",
@@ -182,7 +183,8 @@
       "pages": 13,
       "text_extraction": "passed",
       "visual_review": "all pages rendered at 1400 px and inspected; three defects (missing arrow glyph in the mono font, publication label, outdated FastAPI box label) fixed, changed pages re-inspected and the rest compared on a contact sheet",
-      "guide_packages": "reportlab 4.4.9, pillow 13.0.0 and charset-normalizer 3.5.2 downloaded with locked hashes because the offline uv cache lacked them"
+      "guide_packages": "reportlab 4.4.9, pillow 13.0.0 and charset-normalizer 3.5.2 downloaded with locked hashes because the offline uv cache lacked them",
+      "rebuilt_after_publication": "page 11 re-inspected with stage 06 CI evidence; other pages compared on a contact sheet"
     }
   },
   "publication": {
@@ -290,11 +292,20 @@
       }
     },
     "stage_06": {
-      "status": "not_published",
-      "commit": "—",
+      "status": "published",
+      "commit": "fdb19b19851193a012a024400fe7524d60ea7bd0",
       "branch": "main",
-      "remote_ref": "not_verified",
-      "github_actions": "not_verified"
+      "remote_ref": "verified",
+      "verified_on": "2026-10-29",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40796064293,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40796064293",
+        "all_steps": "success",
+        "postgres_step": "success",
+        "test_counts_in_ci_log": "not_verified"
+      }
     }
   },
   "previous_stages": {
@@ -1204,5 +1215,5 @@
     "Database owners can modify documents, grants, credentials and history directly.",
     "PostgreSQL temporary native lab is not a deployed service."
   ],
-  "guide_note": "Проверка этапа 06 29.10.2026: 460 passed (339 без БД, 121 PostgreSQL), strict mypy 74 файла, Ruff, alembic check, ссылки и сетевой сценарий. Настоящая модель не вызывалась. Этап 06 ещё не опубликован: CI — not_verified."
+  "guide_note": "Проверка этапа 06 29.10.2026: 460 passed (339 без БД, 121 PostgreSQL), strict mypy 74 файла, Ruff, alembic check, ссылки и сетевой сценарий. Настоящая модель не вызывалась. Commit этапа fdb19b1 опубликован в main; CI 40796064293 — success."
 }

@@ -5,8 +5,9 @@
 Дата: **2026-10-29**, часовой пояс пользователя — Asia/Yekaterinburg.
 Проверка этапа 06 выполнена в `main` на рабочем дереве поверх
 `344aaeef2deddb66fa2a27359cd85f8b2f34524f` — commit единой документации.
-Изменения этапа 06 ещё не оформлены commit и не опубликованы; состояние
-публикации каждого этапа приведено отдельно ниже.
+Рабочее дерево стало commit этапа 06 `fdb19b19851193a012a024400fe7524d60ea7bd0`. Его наличие в удалённой
+`main` подтверждено `git ls-remote` сразу после push 29 октября. Ниже сохранены
+исходные проверки кода этапа; состояние публикации приведено отдельно.
 
 ## Реализованная граница этапа 06
 
@@ -132,7 +133,7 @@ SHA-256 — `0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974`.
 | 04 | `66168308e0e5e9538310e9338ca5967db48ba033`, SHA подтверждён в `origin/develop` через `git ls-remote` | [CI 40117305558](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40117305558), `completed / success` для этого SHA, включая шаг PostgreSQL |
 | 05 | `a83bd3c542aad0fc469f967f0a2561b9ae2bfe17`, удалённая `main` подтверждена через `git ls-remote` 27 октября | [CI 40424738428](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40424738428), `completed / success`; повторно подтверждён через GitHub API 29 октября |
 | Документация 05 | `344aaeef2deddb66fa2a27359cd85f8b2f34524f`, совпадение с `origin/main` подтверждено `git ls-remote` 29 октября | [CI 40426585936](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40426585936), `completed / success`; все шаги, включая PostgreSQL, `success` |
-| 06 | Не оформлен commit, не опубликован | `not_verified` |
+| 06 | `fdb19b19851193a012a024400fe7524d60ea7bd0`, совпадение с `origin/main` подтверждено `git ls-remote` после push 29 октября | [CI 40796064293](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40796064293), `completed / success` для этого SHA; все шаги, включая PostgreSQL, `success` |
 
 **2026-10-27 — перенос в `main`.** `main` перемотана вперёд (fast-forward)
 до `474b04498cf92524f6f03950d7c77a12308ed563` — последнего commit `develop`
@@ -158,6 +159,8 @@ ReportLab 4.4.9, Pillow 13.0.0 и charset-normalizer 3.5.2. Текст извл�
 шрифте знак стрелки, неудачную подпись публикации документации и устаревшую
 подпись блока FastAPI. Они исправлены, PDF пересобран, изменённые страницы
 просмотрены снова, остальные сверены по сводному изображению.
+После публикации PDF пересобран ещё раз с данными CI этапа 06: изменилась
+только страница 11, она просмотрена, остальные сверены по сводному изображению.
 
 ## Что ещё отсутствует
 
