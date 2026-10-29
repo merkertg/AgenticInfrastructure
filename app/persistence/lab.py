@@ -106,3 +106,45 @@ def seed_lab(engine: Engine) -> None:
                 actions=["read", "write"],
             )
         )
+
+
+def seed_second_company(engine: Engine) -> None:
+    """Add the fictional company Beta once, so cross-company refusals can be shown."""
+    validate_lab_url(engine.url.render_as_string(hide_password=False))
+    with engine.begin() as connection:
+        existing = connection.scalar(
+            select(func.count())
+            .select_from(db.companies)
+            .where(db.companies.c.id == "beta")
+        )
+        if existing:
+            raise ValueError("lab company beta already exists")
+        connection.execute(insert(db.companies).values(id="beta", name="Beta"))
+        connection.execute(
+            insert(db.projects).values(
+                company_id="beta", id="research", name="Research"
+            )
+        )
+        connection.execute(
+            insert(db.employees).values(
+                company_id="beta", id="beta-user", name="Fictional researcher"
+            )
+        )
+        connection.execute(
+            insert(db.agents).values(
+                company_id="beta",
+                id="beta-agent",
+                employee_id="beta-user",
+                name="Research assistant",
+            )
+        )
+        connection.execute(
+            insert(db.delegations).values(
+                company_id="beta",
+                id="beta-scope",
+                project_id="research",
+                employee_id="beta-user",
+                agent_id="beta-agent",
+                actions=["read"],
+            )
+        )

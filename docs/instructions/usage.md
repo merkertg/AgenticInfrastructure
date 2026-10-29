@@ -2,11 +2,12 @@
 
 [← README](../../README.md) · [All documentation](../../README.md#documentation) · [Quickstart](quickstart.md)
 
-The HTTP API exposes liveness and four authenticated memory operations:
+The HTTP API exposes liveness, readiness and four authenticated memory operations:
 
 | Method | Path | Result |
 | --- | --- | --- |
 | GET | `/health` | `200`, `{"status":"ok","service":"agentic-infrastructure"}` with default settings |
+| GET | `/ready` | `200` when storage answers at the expected schema revision, otherwise `503` with a code |
 | GET | `/memory/projects/{project_id}/documents/{document_id}/versions/{version_id}` | Authorized version, bearer credential required |
 | POST | `/memory/projects/{project_id}/documents/{document_id}/versions` | Append the next version, bearer credential and `Idempotency-Key` required |
 | POST | `/memory/projects/{project_id}/context` | Ranked passages from currently readable documents, bearer credential required |
@@ -524,3 +525,92 @@ failure codes, not document text or tokens. `status` exposes document-state
 counts, up to 50 withheld IDs/codes and the latest run for trusted operators.
 Real corporate connectivity and permission semantics remain unverified. See
 [Stage 07](../STAGE_07.md) and [ADR 0007](../adr/0007-read-only-source-sync.md).
+
+## Container laboratory
+
+Stage 08 packages the API into one image and runs it with PostgreSQL in Docker
+Compose. This is a local laboratory on fictional data, not a corporate
+deployment. See the [Russian Stage 08 guide](../STAGE_08.md) and
+[ADR 0008](../adr/0008-container-lab-and-evaluations.md).
+
+### Image and services
+
+The `Dockerfile` installs runtime dependencies from `uv.lock` with a
+digest-pinned uv and copies only `app`, `migrations` and `alembic.ini` onto a
+digest-pinned `python:3.12.15-slim`. The service runs as UID 10001; its code is
+not writable. `compose.yaml` defines `db` (PostgreSQL 17, digest-pinned, volume
+`postgres_data`), a one-shot `migrate` (`alembic upgrade head`) and `app`.
+
+```bash
+export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+docker compose up --detach --wait
+docker compose ps
+```
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `POSTGRES_PASSWORD` | required | URL-safe password, fixed when the volume is created |
+| `APP_PORT` | `8005` | API port on `127.0.0.1` |
+| `POSTGRES_PORT` | `55436` | PostgreSQL port on `127.0.0.1` for host lab tools |
+| `APP_IMAGE` | `agentic-infrastructure:local` | Image name Compose builds and runs |
+
+Compose interpolates the file for every command, so set `POSTGRES_PASSWORD` even
+for `down`. A different password against an existing volume makes `migrate`
+fail; `docker compose down --volumes` deletes the lab data. Earlier lab tools
+run on the host with
+`DATABASE_URL=postgresql+psycopg://agentic:$POSTGRES_PASSWORD@127.0.0.1:55436/agentic_lab`
+and keep their loopback `_lab` guard.
+
+### Readiness and errors
+
+`GET /ready` returns `200` `{"status":"ready","database":"ok","schema":"current"}`
+only when the database answers at `SCHEMA_HEAD`; otherwise `503` with
+`database` `not_configured` or `unavailable`, or `schema` `outdated`. It never
+returns URLs or error text and is not cached. `/health` stays liveness only. The
+image healthcheck uses `/ready`. Watch failures with `docker compose logs app`:
+storage errors log `memory storage failure: <class>` and readiness failures
+`readiness probe failed: <class>`; headers and tokens are not logged.
+
+### Evaluations and the full scenario
+
+`evaluations/cases.json` lists 22 independent expectations; `scripts/evaluate.py`
+runs them against a stack, re-reading every reference as the same agent:
+
+```bash
+uv run --locked python -m scripts.evaluate --base-url http://127.0.0.1:8005 \
+  --tokens var/lab/tokens.json
+```
+
+The token file maps `fin`, `eng` and `beta` to lab tokens and stays in ignored
+`var/`. `uv run --locked python -m scripts.compose_lab` runs everything in the
+disposable project `agentic-stage08` on ports `18005` and `55438`: build, seed
+Alpha and Beta, reject a corrupted import, sync both source states, evaluate,
+an audit-failure drill (`503` without text or audit rows), a permission-leak
+drill the evaluations must catch, backup, volume loss, restore, equal row counts
+and evaluation outcomes, and sequential latency. The JSON report goes to stdout
+and `var/reports/agentic-stage08.json`; exit status `1` means a check failed.
+`--keep` leaves the stack running and writes `var/lab/tokens.json` (mode `0600`).
+
+### Backup and restore
+
+```bash
+mkdir -p var/backups
+docker compose exec -T db pg_dump --username=agentic --dbname=agentic_lab \
+  --format=custom > var/backups/agentic_lab.dump
+docker compose down --volumes
+docker compose up --detach --wait db
+docker compose exec -T db pg_restore --username=agentic --dbname=agentic_lab \
+  --exit-on-error --no-owner < var/backups/agentic_lab.dump
+docker compose up --detach --wait
+```
+
+A dump holds document text, token hashes and history: never commit or share it.
+A restored source confirmation keeps aging, so synced documents stay closed
+after `max_age` until the next successful sync.
+
+### Limits
+
+The lab uses the PostgreSQL superuser, environment secrets and plain HTTP on
+loopback. It has no TLS, SSO, image registry, vulnerability scan, scheduled
+backups, alerting or retention policy. Latency numbers in the report describe
+one laptop and a few fictional documents, not capacity.

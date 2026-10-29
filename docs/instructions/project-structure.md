@@ -6,7 +6,7 @@
 app/
   __init__.py          # application version
   config.py            # validated, cached configuration
-  main.py              # health schema, application factory and ASGI entry point
+  main.py              # health and readiness, application factory and ASGI entry point
   demo.py              # deterministic fictional offline policy cases
   persistence_demo.py  # fictional PostgreSQL scenario
   credential_lab.py    # guarded issuance of fictional lab agent credentials
@@ -44,7 +44,7 @@ app/
     intake.py          # validated all-or-nothing document intake
     runs.py            # agent run history without question or answer text
     sources.py         # registration, atomic sync, grants and source-access gates
-    lab.py             # guarded fictional bootstrap for a local lab
+    lab.py             # guarded fictional bootstrap of Alpha and Beta for a local lab
 tests/
   conftest.py          # isolated configuration and test client
   test_config.py       # configuration behavior
@@ -52,18 +52,23 @@ tests/
   test_memory_api.py   # memory API checks that need no database
   test_agent_runtime.py # agent loop and offline provider with scripted fakes
   test_answer_api.py   # answer route checks that need no database
+  test_evaluate.py     # evaluation checks against corrupted responses
+  test_compose_lab.py  # container scenario guards without Docker
   domain/              # domain validation, policy and audit-event checks
   persistence/         # real PostgreSQL migration, credential and HTTP checks
 migrations/
   env.py               # Alembic migration environment
   versions/            # versioned schema changes
 alembic.ini
-fixtures/lab/          # invented UTF-8 texts for the intake and search lab
+fixtures/lab/          # invented UTF-8 texts of Alpha and Beta for the labs
 fixtures/source/       # two fictional Handbook snapshots
+evaluations/cases.json # independent expected results of the container lab
 scripts/
   check_docs.py        # local Markdown target checks
   guide_data.py        # validated verification facts, independent of ReportLab
   build_guide.py       # explicit CLI for the illustrated Russian PDF guide
+  evaluate.py          # HTTP evaluation runner and pure response checks
+  compose_lab.py       # full disposable container scenario with drills and restore
 docs/
   STAGE_01.md          # detailed Russian learning guide
   STAGE_02.md          # detailed Russian domain and policy guide
@@ -72,6 +77,7 @@ docs/
   STAGE_05.md          # detailed Russian intake and context search guide
   STAGE_06.md          # detailed Russian agent context tool guide
   STAGE_07.md          # detailed Russian source synchronization guide
+  STAGE_08.md          # detailed Russian container, evaluation and restore guide
   ROADMAP.md           # stage boundaries and acceptance criteria
   APPROACH.md          # intended product and architecture
   CI_CD.md             # configured checks and delivery limits
@@ -80,7 +86,10 @@ docs/
   adr/                # architecture decisions
   instructions/       # short English instructions
   guide/              # illustrated PDF, verification data and rebuild instructions
-.github/workflows/ci.yml
+.github/workflows/ci.yml # checks job and container-lab job
+Dockerfile             # two-stage, digest-pinned, non-root application image
+.dockerignore
+compose.yaml           # db, one-shot migrate and app on loopback ports
 .env.example
 .python-version
 pyproject.toml
@@ -136,3 +145,8 @@ versions, grants, confirmation and run history) → commit`. Fetching holds no
 company lock. Search filters expired sources in SQL before loading text;
 `source_denials()` also protects direct version reads, appends and final answer
 checks. A synchronization does not create employee identity or agent delegation.
+
+The container path is `compose up → db healthy → migrate (alembic upgrade head)
+→ app → /ready`. Lab tools, the fictional source and evaluations run on the host
+against loopback ports; `scripts/compose_lab.py` composes them into one
+reproducible scenario.

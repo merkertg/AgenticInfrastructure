@@ -49,6 +49,10 @@
   or computing ranking statistics, rechecks selected documents before
   returning, and stores references and a query digest only. Do not add a
   persisted index or cache without permission-aware invalidation.
+- Pin container base images by digest, run the service as a non-root user and
+  bind Compose ports to loopback only. Keep backups, reports and lab tokens in
+  the ignored `var/` directory. Evaluations state expected behavior
+  independently and must fail on a deliberately corrupted result.
 - Publish only locally verified changes when publication is authorized. Verify
   remote refs independently from CI. A workflow file or a successful push does
   not prove that GitHub Actions passed.

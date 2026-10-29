@@ -5,7 +5,7 @@ employees. It implements the shared-memory alternative of the
 `#AgenticInfrastructure` assignment. All companies, employees and documents are
 fictional laboratory data.
 
-**Stages 01–07 are implemented:** FastAPI, deterministic access policy,
+**Stages 01–08 are implemented:** FastAPI, deterministic access policy,
 PostgreSQL version storage and audit, hashed bearer credentials, trusted text
 intake, permission-filtered BM25 context search, and a bounded agent that
 answers through one server-scoped memory tool with citation checks. The server
@@ -14,13 +14,18 @@ rights and agent delegation before reading content and again before returning
 an answer. Reads, writes, searches and agent runs require transactional audit.
 A read-only Handbook HTTP adapter synchronizes fictional source documents and
 reader grants; expired source confirmation blocks reads and derived answers.
-The model provider is deterministic and offline; a real corporate connection,
-a live model and container delivery remain unverified or planned. Actual checks and publication
-evidence are recorded separately in [verification](docs/VERIFICATION.md).
+A digest-pinned, non-root image runs with PostgreSQL in Docker Compose; one
+scenario rebuilds the lab from scratch, runs 22 independent evaluations, proves
+they catch an injected permission leak and an audit failure, and restores a
+backup after volume loss. The model provider is deterministic and offline; a
+real corporate connection, a live model and a corporate deployment remain
+unverified. Actual checks and publication evidence are recorded separately in
+[verification](docs/VERIFICATION.md).
 
 Start with the [quickstart](docs/instructions/quickstart.md). The health service
 and offline domain demo need no database or credentials. Memory routes and the
-laboratory need PostgreSQL and server-issued fictional agent credentials.
+laboratory need PostgreSQL and server-issued fictional agent credentials; the
+container scenario needs only Docker and uv.
 
 ## Roadmap
 
@@ -33,7 +38,7 @@ laboratory need PostgreSQL and server-issued fictional agent credentials.
 | 05 | Text intake, permission-filtered BM25 and verifiable context references | Implemented |
 | 06 | Bounded context tool for an agent and offline model provider | Implemented |
 | 07 | Read-only Handbook HTTP source, synchronization and freshness gates | Implemented |
-| 08 | Containers, evaluations, backup and release | Planned |
+| 08 | Container lab, readiness, independent evaluations, backup and restore | Implemented |
 
 See the [detailed roadmap and completion criteria](docs/ROADMAP.md).
 
@@ -42,8 +47,8 @@ See the [detailed roadmap and completion criteria](docs/ROADMAP.md).
 Short English instructions ([docs/instructions/](docs/instructions/)):
 
 - [Quickstart](docs/instructions/quickstart.md): requirements, local startup and the PostgreSQL laboratory
-- [Usage](docs/instructions/usage.md): settings, offline policy, persistence, credentials, version API, document intake, context search, agent answers and source synchronization
-- [Testing and verification](docs/instructions/testing.md): unit tests, isolated PostgreSQL tests, lint, types and documentation checks
+- [Usage](docs/instructions/usage.md): settings, offline policy, persistence, credentials, version API, document intake, context search, agent answers, source synchronization and the container laboratory
+- [Testing and verification](docs/instructions/testing.md): unit tests, isolated PostgreSQL tests, lint, types, documentation checks and the container scenario
 - [CI and publication](docs/instructions/ci-and-delivery.md): workflow, local checks and safe publication
 - [Project structure](docs/instructions/project-structure.md): current modules and request flow
 
@@ -56,6 +61,7 @@ Detailed learning guides in Russian:
 - [Stage 05: document intake and context search](docs/STAGE_05.md)
 - [Stage 06: bounded agent context tool](docs/STAGE_06.md)
 - [Stage 07: read-only source synchronization](docs/STAGE_07.md)
+- [Stage 08: containers, evaluations and restore](docs/STAGE_08.md)
 - [CI/CD guide](docs/CI_CD.md)
 - [Illustrated PDF guide](docs/guide/agentic-infrastructure-guide.pdf) and [rebuild instructions](docs/guide/README.md)
 - [Verification report](docs/VERIFICATION.md) and [machine-readable evidence](docs/guide/verification.json)
@@ -70,4 +76,5 @@ Design and history:
 - [Permission-filtered context](docs/adr/0005-permission-filtered-context.md)
 - [Bounded agent context tool](docs/adr/0006-bounded-agent-context-tool.md)
 - [Read-only source synchronization](docs/adr/0007-read-only-source-sync.md)
+- [Container laboratory and evaluations](docs/adr/0008-container-lab-and-evaluations.md)
 - [Development log](docs/DEVELOPMENT_LOG.md)

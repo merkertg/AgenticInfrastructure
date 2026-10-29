@@ -21,7 +21,8 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:17
+        # The same index digest as compose.yaml; a tag can later move.
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
         env:
           POSTGRES_USER: agentic
           POSTGRES_PASSWORD: agentic-local
@@ -75,3 +76,34 @@ jobs:
 
       - name: Check whitespace
         run: git diff --check
+
+  container-lab:
+    name: Container laboratory and evaluations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12.23"
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked dependencies
+        run: uv sync --locked
+
+      # Builds the image, starts a disposable Compose project, runs evaluations,
+      # the audit and permission-leak drills, and a backup and restore.
+      - name: Run the full container scenario
+        run: uv run --locked python -m scripts.compose_lab
+
+      # The report holds counts, case IDs and timings; no tokens or passwords.
+      - name: Show the scenario report
+        if: always()
+        run: cat var/reports/agentic-stage08.json || true

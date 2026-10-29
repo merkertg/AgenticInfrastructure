@@ -165,7 +165,27 @@ The source token is supplied at run time and never persisted. This is a tested
 contract with a fictional lab, not evidence of a real corporate integration.
 See [ADR 0007](adr/0007-read-only-source-sync.md).
 
-## Architecture and remaining stages
+Stage 08 packages and checks the whole laboratory:
+
+```text
+docker build (uv.lock, digest-pinned bases, non-root runtime)
+        ↓
+compose: db (healthy) → migrate (alembic upgrade head) → app (/ready)
+        ↓
+host lab tools on loopback: seed Alpha and Beta, sync source, issue tokens
+        ↓
+22 independent HTTP evaluations → audit-failure and permission-leak drills
+        ↓
+pg_dump → volume loss → pg_restore → equal row counts and evaluation outcomes
+```
+
+`/ready` checks storage and the expected schema revision; `/health` stays
+liveness only. Evaluations state expected behavior independently of the code and
+re-read every reference as the same agent. The drills show that a deliberately
+corrupted result is detected; they do not prevent a database owner from making
+it. See [ADR 0008](adr/0008-container-lab-and-evaluations.md).
+
+## Architecture and completed stages
 
 Grow a modular monolith as working behavior appears:
 
@@ -178,7 +198,7 @@ Grow a modular monolith as working behavior appears:
 | Retrieval | Implemented bounded intake, permission-filtered search and context provenance | 05 |
 | Agent tool | Implemented one scoped search tool, citation checks and an offline provider | 06 |
 | Source adapter | Implemented read-only Handbook HTTP adapter, sync and freshness gates | 07 |
-| Delivery | Containers, integration evaluations and operating instructions | 08 |
+| Delivery | Implemented container lab, readiness, independent evaluations, backup and restore drill | 08 |
 
 Domain code uses ordinary Python types without FastAPI, database or model SDK
 imports. The PostgreSQL adapter implements explicit memory-operation results.
@@ -251,8 +271,9 @@ A read record does not prove that the client received the response. If required
 audit recording is unavailable, business data must not be returned and mutations
 must fail closed; that outage may also prevent a durable denial record. The
 liveness endpoint still describes whether the HTTP service can respond. The
-current failure behavior is exercised with PostgreSQL integration tests;
-deployment recovery procedures belong to the delivery stage.
+current failure behavior is exercised with PostgreSQL integration tests and,
+in Stage 08, with an audit-failure drill and a backup-and-restore drill in the
+container laboratory; recovery in a real deployment needs its own procedures.
 Application audit records alone do not prove tamper resistance against database
 administrators; stronger retention and operational controls need separate work.
 
@@ -290,10 +311,11 @@ implementation. A database check is reported as verified only after an actual
 PostgreSQL run, separately from the unit suite.
 
 This is a learning build. Production readiness would require verified identity
-integration, transport security, secret management, deployment hardening,
-operational monitoring, recovery exercises and a review of the organization's
-actual data policy. None is established by an offline access decision or by a
-successful `/health`.
+integration, transport security, secret management, a least-privilege database
+role, deployment hardening, operational monitoring with alerting, scheduled
+backups and recovery exercises in the target environment, and a review of the
+organization's actual data policy. None is established by an offline access
+decision, a successful `/health` or `/ready`, or the local Compose laboratory.
 
 ## Learning and delivery
 

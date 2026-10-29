@@ -8,8 +8,14 @@ Separate steps run Ruff, formatting, strict mypy, unit tests, PostgreSQL tests,
 documentation links, lock consistency and whitespace checks. PostgreSQL tests
 use a disposable PostgreSQL 17 service and a database ending in `_test`.
 
-The workflow has read-only repository permissions. It does not build or publish
-an image, deploy a service or use corporate credentials. PDF generation is a
+A second job, `container-lab`, runs `python -m scripts.compose_lab` on a clean
+runner: it builds the image, starts a disposable Compose project, runs the
+evaluations, the audit-failure and permission-leak drills and a backup and
+restore, then prints the JSON report (no tokens or passwords). The checks job
+uses the same digest-pinned PostgreSQL image as `compose.yaml`.
+
+The workflow has read-only repository permissions. It does not publish an
+image, deploy a service or use corporate credentials. PDF generation is a
 local documentation operation described in [the guide index](../guide/README.md).
 
 Before an authorized publication, run [local checks](testing.md), review the

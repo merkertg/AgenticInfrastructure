@@ -4,10 +4,12 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 
 ROOT = Path(__file__).resolve().parents[2]
+# The Alembic revision this code expects; a test keeps it equal to the head.
+SCHEMA_HEAD = "0005_source_sync"
 
 
 def make_engine(database_url: str) -> Engine:
@@ -43,3 +45,16 @@ def migrate(database_url: str) -> None:
             command.upgrade(config, "head")
     finally:
         engine.dispose()
+
+
+def schema_revision(engine: Engine) -> str | None:
+    """Read the applied Alembic revision, or None when no revision is recorded."""
+    with engine.connect() as connection:
+        if not connection.scalar(text("SELECT to_regclass('alembic_version')")):
+            return None
+        values = list(
+            connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalars()
+        )
+    return values[0] if len(values) == 1 else None

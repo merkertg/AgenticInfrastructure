@@ -36,6 +36,7 @@ def test_openapi_describes_health_contract(client: TestClient) -> None:
     assert schema["info"]["version"] == __version__ == "0.1.0"
     assert set(schema["paths"]) == {
         "/health",
+        "/ready",
         "/memory/projects/{project_id}/documents/{document_id}/versions",
         "/memory/projects/{project_id}/documents/{document_id}/versions/{version_id}",
         "/memory/projects/{project_id}/context",
@@ -127,3 +128,49 @@ def test_health_response_rejects_invalid_payloads(payload: dict[str, object]) ->
 
     with pytest.raises(ValidationError):
         HealthResponse.model_validate(payload)
+
+
+def test_ready_without_storage_is_not_ready(client: TestClient) -> None:
+    """Liveness can pass while readiness reports missing storage configuration."""
+    response = client.get("/ready")
+    assert response.status_code == 503
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {
+        "status": "not_ready",
+        "database": "not_configured",
+        "schema": "unknown",
+    }
+
+
+def test_ready_hides_unreachable_storage_details(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An unreachable database is reported by code; URL and password stay hidden."""
+    from app.main import create_app
+
+    url = "postgresql+psycopg://agentic:hidden-password@127.0.0.1:1/agentic_lab"
+    with TestClient(create_app(Settings(app_database_url=url))) as unreachable:
+        response = unreachable.get("/ready")
+    assert response.status_code == 503
+    assert response.json() == {
+        "status": "not_ready",
+        "database": "unavailable",
+        "schema": "unknown",
+    }
+    assert "hidden-password" not in response.text + caplog.text
+    assert "readiness probe failed: OperationalError" in caplog.text
+
+
+def test_schema_head_matches_the_migration_history() -> None:
+    """The revision the code expects is the head of the committed migrations."""
+    from pathlib import Path
+
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    from app.persistence.database import SCHEMA_HEAD
+
+    root = Path(__file__).resolve().parents[1]
+    configuration = Config(str(root / "alembic.ini"))
+    configuration.set_main_option("script_location", str(root / "migrations"))
+    assert ScriptDirectory.from_config(configuration).get_heads() == [SCHEMA_HEAD]

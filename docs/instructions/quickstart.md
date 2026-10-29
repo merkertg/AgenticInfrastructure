@@ -64,3 +64,23 @@ For the database-free policy demonstration:
 ```bash
 uv run --locked python -m app.demo
 ```
+
+## Container laboratory
+
+With Docker running, the whole Stage 08 laboratory builds, evaluates, breaks,
+backs up and restores itself in a disposable Compose project:
+
+```bash
+uv run --locked python -m scripts.compose_lab
+```
+
+To keep a stack for manual work, start the Compose services yourself:
+
+```bash
+export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+docker compose up --detach --wait
+curl -s http://127.0.0.1:8005/ready
+```
+
+See [the container laboratory](usage.md#container-laboratory) and the
+[Russian Stage 08 guide](../STAGE_08.md).

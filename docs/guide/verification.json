@@ -1,14 +1,13 @@
 {
   "schema_version": 4,
-  "stage": "07",
-  "checked_at": "2026-10-29T08:45:07+05:00",
-  "scope": "One fictional read-only Handbook HTTP v1 source; strict bounded full snapshots; explicit source-user mapping; atomic version, deletion, read-grant and run-history reconciliation under the company lock; expiring source access in reads, search and cited answers; guarded register/run/status CLI and fictional loopback server",
+  "stage": "08",
+  "checked_at": "2026-10-29T20:41:17+05:00",
+  "scope": "Two-stage digest-pinned non-root application image; Docker Compose lab with PostgreSQL, one-shot migration and API on loopback ports; /ready storage and schema probe; fictional second company Beta; 22 independent HTTP evaluations with reference re-reads; full disposable scenario with corrupted-import, audit-failure and permission-leak drills, pg_dump, volume loss and restore; container-lab CI job",
   "revision": {
     "branch": "main",
-    "base_commit": "01e01b0063d3d0327893a0021d8fac17d474a37a",
-    "code_commit": "5f5bc7556da0e7a039be7fa9366700d5f22c7d89",
-    "state": "published_code_commit",
-    "note": "Local checks ran on the working tree that became the stage 07 commit; its remote ref and CI were verified separately after publication."
+    "base_commit": "11ece3b2f13bcb6d8f67e0f43074a2fbcea535b3",
+    "state": "locally_verified_uncommitted",
+    "note": "No commit or push in this verification; earlier publication records are historical."
   },
   "runtime": {
     "python": "3.12.15",
@@ -31,37 +30,46 @@
   "lock": {
     "sha256": "0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974",
     "exclude_newer": "2026-10-10T00:00:00Z",
-    "unchanged_since_documentation_update": true
+    "unchanged_since_stage_07": true
   },
   "environment": {
-    "postgres": "PostgreSQL 17.10 (Homebrew)",
-    "temporary_cluster": "new isolated cluster under /private/tmp; LC_ALL=C; Unix sockets disabled; stopped after verification",
-    "address": "127.0.0.1:55437",
+    "postgres": "PostgreSQL 17.10 (Homebrew) for pytest; PostgreSQL 17.11 image in Compose",
+    "temporary_cluster": "new isolated cluster under /private/tmp; Unix sockets disabled",
+    "address": "127.0.0.1:55435",
     "databases": [
-      "agentic_test",
-      "agentic_stage07_lab",
-      "agentic_stage07_final_lab"
-    ]
+      "agentic_test"
+    ],
+    "docker": {
+      "docker_server": "29.8.2",
+      "compose": "5.6.0",
+      "docker_host": "Docker Desktop aarch64",
+      "cpus": 10,
+      "memory_bytes": 8319504384,
+      "image_bytes": 279020945
+    },
+    "images": {
+      "python": "python:3.12.15-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704",
+      "uv": "ghcr.io/astral-sh/uv:0.12.23@sha256:61d393e44e249f2e4b526b6c7ddcecce245946826e608e11c93ad4f5bba55b21",
+      "postgres": "postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3"
+    }
   },
   "checks": {
     "sync_locked": {
       "status": "passed",
-      "guide_group": true,
-      "resolved_packages": 43,
-      "installed_packages_checked": 39
+      "note": "every command ran with uv run --locked; uv.lock unchanged"
     },
     "pytest": {
       "status": "passed",
-      "tests_passed": 591,
+      "tests_passed": 621,
       "without_postgres": {
-        "passed": 451
+        "passed": 479
       },
       "postgres": {
-        "passed": 140
+        "passed": 142
       },
       "without_test_database_url": {
-        "passed": 451,
-        "skipped": 140,
+        "passed": 479,
+        "skipped": 142,
         "counts_as_postgres_check": false
       },
       "deprecation_warnings_as_errors": true
@@ -71,11 +79,11 @@
     },
     "ruff_format": {
       "status": "passed",
-      "files": 117
+      "files": 124
     },
     "mypy": {
       "status": "passed",
-      "source_files": 88,
+      "source_files": 93,
       "paths": [
         "app",
         "tests",
@@ -90,111 +98,213 @@
     "migration": {
       "status": "passed",
       "revision": "0005_source_sync",
-      "application_tables": 20,
       "alembic_check": "No new upgrade operations detected.",
-      "downgrade_and_reupgrade": "8 migration tests; source downgrade deactivates mirrored documents and all their grants before removing source metadata; ordinary memory remains active"
+      "schema_head_test": "SCHEMA_HEAD equals the Alembic head"
     },
-    "http_network_smoke": {
-      "database": "agentic_stage07_final_lab",
-      "actual_loopback_http": true,
-      "first_sync": {
-        "listed": 4,
-        "fetched": 4,
-        "created": 4,
-        "updated": 0,
-        "unchanged": 0,
-        "restored": 0,
-        "deleted": 0,
-        "withheld": 0,
-        "unmapped_readers": 2,
-        "grants_added": 4,
-        "grants_revoked": 0
-      },
-      "initial_answer": "200 answered; handbook:travel-desk@r1; offsets reproduced",
-      "replay": {
-        "listed": 4,
-        "fetched": 0,
-        "created": 0,
-        "updated": 0,
-        "unchanged": 4,
-        "restored": 0,
-        "deleted": 0,
-        "withheld": 0,
-        "unmapped_readers": 2,
-        "grants_added": 0,
-        "grants_revoked": 0
-      },
-      "denials": {
-        "synced_write": 404,
-        "other_employee_without_delegation": 404,
-        "invalid_token": 401
-      },
-      "changed_sync": {
-        "listed": 4,
-        "fetched": 2,
-        "created": 0,
-        "updated": 1,
-        "unchanged": 2,
-        "restored": 0,
-        "deleted": 1,
-        "withheld": 1,
-        "unmapped_readers": 2,
-        "grants_added": 0,
-        "grants_revoked": 2
-      },
-      "changed_answer": "200 answered; handbook:travel-desk@r2; version 2; old permitted citation remains readable",
-      "revoked_answer": "200 unanswered; no office-access evidence",
-      "deleted_document": "vendor-review absent from context",
-      "outage": "failed/unavailable; previous snapshot readable within 60-second window",
-      "expired": "status confirmed=false; version read 404; answer 200 unanswered",
-      "expiry_method": "aged confirmed_at by 61 seconds under company lock in disposable lab; no wall-clock wait",
-      "history": "no plain source/agent tokens, document text or question text",
-      "server_logs": "no plain source/agent tokens",
-      "servers_stopped": true,
-      "status": "passed",
-      "provider": "offline-extractive-v1"
-    },
-    "timeout_regressions": {
+    "readiness": {
       "status": "passed",
       "cases": [
-        "final listing and final content at or past collection deadline",
-        "trickled HTTP headers",
-        "late connection after cancellation sends no request",
-        "bounded network worker capacity",
-        "Connection: close and slow chunk-size extension releases worker slot"
+        "not configured 503",
+        "unreachable 503 without URL or password",
+        "current 200",
+        "outdated and missing revision 503"
+      ]
+    },
+    "container_image": {
+      "status": "passed",
+      "bytes": 279020945,
+      "user": "uid=10001(app)",
+      "code_writable": false,
+      "absent": [
+        "uv",
+        "pytest",
+        "reportlab",
+        "tests",
+        "fixtures",
+        "docs",
+        ".env"
+      ]
+    },
+    "compose_config": {
+      "status": "passed",
+      "command": "docker compose config --quiet"
+    },
+    "container_scenario": {
+      "status": "passed",
+      "command": "uv run --locked python -m scripts.compose_lab",
+      "started_at": "2026-10-29T15:40:45.223362+00:00",
+      "finished_at": "2026-10-29T15:41:17.531754+00:00",
+      "seconds": 32.6,
+      "image_removed_before_run": true,
+      "build_cache_used": true,
+      "seed": {
+        "imported": {
+          "finance": 2,
+          "engineering": 1,
+          "research": 1
+        },
+        "corrupted_intake": [
+          [
+            "broken-scan",
+            "not_utf8"
+          ]
+        ],
+        "source_syncs": [
+          {
+            "snapshot": "handbook-1.json",
+            "created": 4,
+            "updated": 0,
+            "deleted": 0,
+            "withheld": [],
+            "grants_revoked": 0
+          },
+          {
+            "snapshot": "handbook-2.json",
+            "created": 0,
+            "updated": 1,
+            "deleted": 1,
+            "withheld": [
+              [
+                "budget-draft",
+                "control_characters"
+              ]
+            ],
+            "grants_revoked": 2
+          }
+        ]
+      },
+      "evaluations": {
+        "cases": 22,
+        "passed": 22,
+        "failed": []
+      },
+      "audit_drill": {
+        "status_during_failure": 503,
+        "body_during_failure": {
+          "detail": "memory storage unavailable"
+        },
+        "text_withheld": true,
+        "audit_rows_unchanged": true,
+        "status_after_recovery": 200,
+        "passed": true
+      },
+      "tamper_drill": {
+        "failed_cases_during_leak": [
+          "cross-project-context",
+          "cross-project-read",
+          "instruction-does-not-widen-access"
+        ],
+        "passed_after_repair": true,
+        "passed": true
+      },
+      "backup_restore": {
+        "backup_bytes": 61703,
+        "restore_seconds": 13.7,
+        "row_counts": {
+          "companies": 2,
+          "projects": 3,
+          "employees": 3,
+          "agents": 3,
+          "agent_credentials": 3,
+          "delegations": 3,
+          "documents": 10,
+          "versions": 10,
+          "grants": 9,
+          "sources": 1,
+          "source_accounts": 2,
+          "source_documents": 5
+        },
+        "row_counts_equal": true,
+        "evaluations_equal": true,
+        "passed": true
+      },
+      "measurements": {
+        "ready": {
+          "requests": 30,
+          "statuses": [
+            200
+          ],
+          "p50_ms": 1.2,
+          "p95_ms": 1.4,
+          "max_ms": 1.5
+        },
+        "context": {
+          "requests": 30,
+          "statuses": [
+            200
+          ],
+          "p50_ms": 9.7,
+          "p95_ms": 10.4,
+          "max_ms": 10.8
+        },
+        "answer": {
+          "requests": 30,
+          "statuses": [
+            200
+          ],
+          "p50_ms": 13.7,
+          "p95_ms": 14.4,
+          "max_ms": 29.0
+        }
+      },
+      "earlier_runs": "First run found a wrong expected 404 body in the case file (memory version not available); only the case file changed.",
+      "keep_mode": "--keep left the stack healthy, wrote var/lab/tokens.json with mode 0600; scripts.evaluate CLI passed 22/22; stack and file removed",
+      "project_removed": true
+    },
+    "manual_compose": {
+      "status": "passed",
+      "project": "agentic-infrastructure",
+      "steps": "up --wait exit 0; /ready ready; persistence_demo --setup and demo from the host; manual pg_dump, down --volumes, pg_restore, up --wait; 2 versions and 7 audit events restored",
+      "database_stopped": "/health 200; /ready 503 unavailable; context 503; logs show OperationalError classes only; no tokens in logs",
+      "health_transition": "app unhealthy between 60 and 75 seconds after db stop; healthy within 10 seconds after db start"
+    },
+    "mutation_checks": {
+      "status": "passed",
+      "caught": 5,
+      "cases": [
+        "forbidden-phrase check disabled",
+        "reference text versus span comparison disabled",
+        "answer quote check disabled",
+        "/ready ignores the schema revision",
+        "/ready reports ready without storage"
       ]
     },
     "live_corporate_source": {
       "status": "not_run",
-      "reason": "fictional HTTP laboratory only; no corporate service credentials used"
+      "reason": "fictional HTTP laboratory only"
     },
     "live_model": {
       "status": "not_run",
       "reason": "offline provider only"
     },
+    "corporate_deployment": {
+      "status": "not_run",
+      "reason": "local Compose laboratory only"
+    },
+    "remote_container_lab_ci": {
+      "status": "not_verified",
+      "reason": "no commit or push in this verification"
+    },
     "documentation_links": {
       "status": "passed",
-      "local_links": 213,
-      "markdown_files": 27
+      "local_links": 237,
+      "markdown_files": 29
     },
     "whitespace": {
-      "status": "passed",
-      "scope": "tracked diff and all new files checked separately",
-      "new_files_checked": 19
+      "status": "passed"
     },
     "function_documentation": {
       "status": "passed",
-      "definitions_checked": 736,
+      "definitions_checked": 807,
       "scope": "all functions and classes in app, tests, scripts and migrations"
     },
     "pdf": {
       "status": "passed",
       "language": "ru",
-      "pages": 15,
-      "text_extraction": "passed with pdftotext -layout; stage07, test counts and publication status present",
-      "visual_review": "All 15 pages rendered at 1400 px and inspected. Final wording and limitations changed only pages 10 and 15; both re-rendered and inspected; other 13 pages pixel-compared unchanged. No clipping or overlap observed.",
-      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide",
-      "rebuilt_after_publication": "Rebuilt with stage 07 CI data on 2026-10-29: only page 13 changed after rasterization; it was rendered at 1400 px and inspected, the other 14 pages were byte-identical."
+      "pages": 16,
+      "text_extraction": "passed with pdftotext -layout; stage 08 section, test counts and publication status present",
+      "visual_review": "All 16 pages rendered at 1400 px. Changed pages 1-3 and 11-16 inspected; pages 4-10 byte-identical to the committed guide after rasterization. First review found missing arrow glyphs in two diagram labels of the stage 08 page; replaced with words, rebuilt and re-inspected.",
+      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide"
     }
   },
   "publication": {
@@ -332,6 +442,13 @@
         "postgres_step": "success",
         "test_counts_in_ci_log": "not_verified"
       }
+    },
+    "stage_08": {
+      "status": "locally_verified_uncommitted",
+      "commit": null,
+      "branch": "main",
+      "remote_ref": "not_published",
+      "github_actions": "not_verified"
     }
   },
   "previous_stages": {
@@ -1430,6 +1547,182 @@
         "PostgreSQL temporary native lab is not a deployed service."
       ],
       "guide_note": "Проверка этапа 06 29.10.2026: 460 passed (339 без БД, 121 PostgreSQL), strict mypy 74 файла, Ruff, alembic check, ссылки и сетевой сценарий. Настоящая модель не вызывалась. Commit этапа fdb19b1 опубликован в main; CI 40796064293 — success."
+    },
+    "07": {
+      "stage": "07",
+      "checked_at": "2026-10-29T08:45:07+05:00",
+      "scope": "One fictional read-only Handbook HTTP v1 source; strict bounded full snapshots; explicit source-user mapping; atomic version, deletion, read-grant and run-history reconciliation under the company lock; expiring source access in reads, search and cited answers; guarded register/run/status CLI and fictional loopback server",
+      "revision": {
+        "branch": "main",
+        "base_commit": "01e01b0063d3d0327893a0021d8fac17d474a37a",
+        "code_commit": "5f5bc7556da0e7a039be7fa9366700d5f22c7d89",
+        "state": "published_code_commit",
+        "note": "Local checks ran on the working tree that became the stage 07 commit; its remote ref and CI were verified separately after publication."
+      },
+      "environment": {
+        "postgres": "PostgreSQL 17.10 (Homebrew)",
+        "temporary_cluster": "new isolated cluster under /private/tmp; LC_ALL=C; Unix sockets disabled; stopped after verification",
+        "address": "127.0.0.1:55437",
+        "databases": [
+          "agentic_test",
+          "agentic_stage07_lab",
+          "agentic_stage07_final_lab"
+        ]
+      },
+      "checks": {
+        "sync_locked": {
+          "status": "passed",
+          "guide_group": true,
+          "resolved_packages": 43,
+          "installed_packages_checked": 39
+        },
+        "pytest": {
+          "status": "passed",
+          "tests_passed": 591,
+          "without_postgres": {
+            "passed": 451
+          },
+          "postgres": {
+            "passed": 140
+          },
+          "without_test_database_url": {
+            "passed": 451,
+            "skipped": 140,
+            "counts_as_postgres_check": false
+          },
+          "deprecation_warnings_as_errors": true
+        },
+        "ruff_check": {
+          "status": "passed"
+        },
+        "ruff_format": {
+          "status": "passed",
+          "files": 117
+        },
+        "mypy": {
+          "status": "passed",
+          "source_files": 88,
+          "paths": [
+            "app",
+            "tests",
+            "scripts",
+            "migrations"
+          ]
+        },
+        "lock_offline": {
+          "status": "passed",
+          "resolved_packages": 43
+        },
+        "migration": {
+          "status": "passed",
+          "revision": "0005_source_sync",
+          "application_tables": 20,
+          "alembic_check": "No new upgrade operations detected.",
+          "downgrade_and_reupgrade": "8 migration tests; source downgrade deactivates mirrored documents and all their grants before removing source metadata; ordinary memory remains active"
+        },
+        "http_network_smoke": {
+          "database": "agentic_stage07_final_lab",
+          "actual_loopback_http": true,
+          "first_sync": {
+            "listed": 4,
+            "fetched": 4,
+            "created": 4,
+            "updated": 0,
+            "unchanged": 0,
+            "restored": 0,
+            "deleted": 0,
+            "withheld": 0,
+            "unmapped_readers": 2,
+            "grants_added": 4,
+            "grants_revoked": 0
+          },
+          "initial_answer": "200 answered; handbook:travel-desk@r1; offsets reproduced",
+          "replay": {
+            "listed": 4,
+            "fetched": 0,
+            "created": 0,
+            "updated": 0,
+            "unchanged": 4,
+            "restored": 0,
+            "deleted": 0,
+            "withheld": 0,
+            "unmapped_readers": 2,
+            "grants_added": 0,
+            "grants_revoked": 0
+          },
+          "denials": {
+            "synced_write": 404,
+            "other_employee_without_delegation": 404,
+            "invalid_token": 401
+          },
+          "changed_sync": {
+            "listed": 4,
+            "fetched": 2,
+            "created": 0,
+            "updated": 1,
+            "unchanged": 2,
+            "restored": 0,
+            "deleted": 1,
+            "withheld": 1,
+            "unmapped_readers": 2,
+            "grants_added": 0,
+            "grants_revoked": 2
+          },
+          "changed_answer": "200 answered; handbook:travel-desk@r2; version 2; old permitted citation remains readable",
+          "revoked_answer": "200 unanswered; no office-access evidence",
+          "deleted_document": "vendor-review absent from context",
+          "outage": "failed/unavailable; previous snapshot readable within 60-second window",
+          "expired": "status confirmed=false; version read 404; answer 200 unanswered",
+          "expiry_method": "aged confirmed_at by 61 seconds under company lock in disposable lab; no wall-clock wait",
+          "history": "no plain source/agent tokens, document text or question text",
+          "server_logs": "no plain source/agent tokens",
+          "servers_stopped": true,
+          "status": "passed",
+          "provider": "offline-extractive-v1"
+        },
+        "timeout_regressions": {
+          "status": "passed",
+          "cases": [
+            "final listing and final content at or past collection deadline",
+            "trickled HTTP headers",
+            "late connection after cancellation sends no request",
+            "bounded network worker capacity",
+            "Connection: close and slow chunk-size extension releases worker slot"
+          ]
+        },
+        "live_corporate_source": {
+          "status": "not_run",
+          "reason": "fictional HTTP laboratory only; no corporate service credentials used"
+        },
+        "live_model": {
+          "status": "not_run",
+          "reason": "offline provider only"
+        },
+        "documentation_links": {
+          "status": "passed",
+          "local_links": 213,
+          "markdown_files": 27
+        },
+        "whitespace": {
+          "status": "passed",
+          "scope": "tracked diff and all new files checked separately",
+          "new_files_checked": 19
+        },
+        "function_documentation": {
+          "status": "passed",
+          "definitions_checked": 736,
+          "scope": "all functions and classes in app, tests, scripts and migrations"
+        },
+        "pdf": {
+          "status": "passed",
+          "language": "ru",
+          "pages": 15,
+          "text_extraction": "passed with pdftotext -layout; stage07, test counts and publication status present",
+          "visual_review": "All 15 pages rendered at 1400 px and inspected. Final wording and limitations changed only pages 10 and 15; both re-rendered and inspected; other 13 pages pixel-compared unchanged. No clipping or overlap observed.",
+          "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide",
+          "rebuilt_after_publication": "Rebuilt with stage 07 CI data on 2026-10-29: only page 13 changed after rasterization; it was rendered at 1400 px and inspected, the other 14 pages were byte-identical."
+        }
+      }
     }
   },
   "not_implemented": [
@@ -1443,11 +1736,16 @@
     "corporate_identity_provider",
     "rate_limiting",
     "tls",
-    "containers",
     "verified_real_corporate_source",
     "automatic_source_sync_scheduler",
     "http_source_administration",
-    "physical_source_history_erasure"
+    "physical_source_history_erasure",
+    "image_registry_publication",
+    "image_vulnerability_scan",
+    "least_privilege_database_role",
+    "secret_manager",
+    "scheduled_backups",
+    "alerting"
   ],
   "limitations": [
     "The source is a fictional Handbook HTTP v1 laboratory; real corporate source behavior and ACL mapping are not verified.",
@@ -1463,7 +1761,12 @@
     "Question and query digests in history can be guessed for short inputs.",
     "Bearer tokens impersonate their agent until expiry or revocation; memory HTTP is loopback only.",
     "Database owners can modify documents, grants, credentials and history directly.",
-    "The temporary native PostgreSQL lab is not a deployed service."
+    "The Compose laboratory and the temporary native PostgreSQL lab are not a deployed service.",
+    "The Compose lab connects as the PostgreSQL superuser and keeps secrets in environment variables.",
+    "Evaluations cover only the listed behaviors; grounded-quote checks fit the offline provider only.",
+    "Drills need database-owner access and show detection, not prevention.",
+    "A restored source confirmation keeps aging; synced documents close after max_age until the next sync.",
+    "Latency figures come from one laptop and a few fictional documents; they are not a capacity claim."
   ],
-  "guide_note": "Проверка этапа 07 29.10.2026: 591 passed (451 без PostgreSQL, 140 PostgreSQL); strict mypy 88 файлов, Ruff, alembic check, ссылки и сквозной сетевой сценарий. Источник Handbook вымышленный; корпоративный сервис и настоящая модель не подключались. Commit этапа 5f5bc75 опубликован в main; CI 40814551812 — success."
+  "guide_note": "Проверка этапа 08 29.10.2026: 621 passed (479 без PostgreSQL, 142 PostgreSQL); strict mypy 93 файла, Ruff, alembic check, ссылки. Контейнерный сценарий: 22/22 оценки до и после восстановления, утечка прав и сбой аудита обнаружены. Корпоративное развёртывание и живая модель не проверялись. Этап 08 локальный, без commit/push; CI — not_verified."
 }

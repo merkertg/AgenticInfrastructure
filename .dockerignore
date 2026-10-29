@@ -1,0 +1,29 @@
+# The image rebuilds its environment from uv.lock inside Linux.
+.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# No Git history, local settings, secrets, backups or reports in the build.
+.git/
+.github/
+.gitignore
+.env
+.env.*
+!.env.example
+.DS_Store
+.claude/
+var/
+*.log
+
+# The runtime needs app/, migrations/ and alembic.ini only.
+tests/
+scripts/
+evaluations/
+fixtures/
+docs/
+compose.yaml
+Dockerfile
+.dockerignore

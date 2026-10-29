@@ -116,3 +116,24 @@ uv run --locked pytest tests/persistence/test_sources.py
 The second command needs the explicit validated `TEST_DATABASE_URL`. A successful
 loopback test proves the fictional HTTP contract only; it does not prove real
 corporate credentials, ACL interpretation or production connectivity.
+
+## Evaluations and container scenario
+
+`tests/test_evaluate.py` feeds the evaluation checks sound and deliberately
+corrupted responses: foreign documents, forbidden phrases, shifted spans,
+unquoted answer lines and different refusal bodies must each be reported.
+`tests/test_health.py` and `tests/persistence/test_readiness.py` cover `/ready`,
+including an outdated or missing schema revision, and keep `SCHEMA_HEAD` equal
+to the migration head. `tests/test_compose_lab.py` checks the scenario guards
+without Docker.
+
+With Docker running, the full scenario is the integration check of Stage 08:
+
+```bash
+uv run --locked python -m scripts.compose_lab
+```
+
+It needs no `.env` and creates its own password and tokens. Exit status `0`
+means all 22 evaluations passed before and after restore, the corrupted import
+was rejected, both drills behaved as expected and the timed requests returned
+`200`. Unit tests never start Docker.

@@ -1,0 +1,67 @@
+# Stage 08 container laboratory: PostgreSQL, a one-shot migration and the API.
+# Lab tools (seeding, credentials, the fictional source and evaluations) run on
+# the host through the loopback ports below; nothing listens on other interfaces.
+name: agentic-infrastructure
+
+# Migration and API run from one image built from this repository.
+x-application: &application
+  image: ${APP_IMAGE:-agentic-infrastructure:local}
+  build:
+    context: .
+
+services:
+  db:
+    # Pinned by index digest; the same tag can later point to another image.
+    image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
+    environment:
+      POSTGRES_USER: agentic
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a URL-safe POSTGRES_PASSWORD}
+      POSTGRES_DB: agentic_lab
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55436}:5432"
+    volumes:
+      # A plain down keeps this volume; down --volumes deletes the lab data.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # TCP is checked after initialization, not the temporary init server.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U agentic -d agentic_lab"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  migrate:
+    <<: *application
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://agentic:${POSTGRES_PASSWORD:?set a URL-safe POSTGRES_PASSWORD}@db:5432/agentic_lab
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    # A one-shot command is not an HTTP server.
+    healthcheck:
+      disable: true
+
+  app:
+    <<: *application
+    environment:
+      APP_ENV: development
+      APP_DATABASE_URL: postgresql+psycopg://agentic:${POSTGRES_PASSWORD:?set a URL-safe POSTGRES_PASSWORD}@db:5432/agentic_lab
+    ports:
+      - "127.0.0.1:${APP_PORT:-8005}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    # The Dockerfile probes /ready; Compose only checks more often.
+    healthcheck:
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  postgres_data:
