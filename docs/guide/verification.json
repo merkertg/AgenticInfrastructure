@@ -6,8 +6,9 @@
   "revision": {
     "branch": "main",
     "base_commit": "11ece3b2f13bcb6d8f67e0f43074a2fbcea535b3",
-    "state": "locally_verified_uncommitted",
-    "note": "No commit or push in this verification; earlier publication records are historical."
+    "code_commit": "e06e5f533604b717b05f3d68e512449cc8bb58da",
+    "state": "published_code_commit",
+    "note": "Local checks ran on the working tree that became the stage 08 commit; its remote ref and CI were verified separately after publication."
   },
   "runtime": {
     "python": "3.12.15",
@@ -282,8 +283,10 @@
       "reason": "local Compose laboratory only"
     },
     "remote_container_lab_ci": {
-      "status": "not_verified",
-      "reason": "no commit or push in this verification"
+      "status": "passed",
+      "run_id": 40905270723,
+      "runner": "ubuntu-24.04",
+      "evidence": "job and step conclusions via the public GitHub API; the scenario exits non-zero on any failed check"
     },
     "documentation_links": {
       "status": "passed",
@@ -304,7 +307,8 @@
       "pages": 16,
       "text_extraction": "passed with pdftotext -layout; stage 08 section, test counts and publication status present",
       "visual_review": "All 16 pages rendered at 1400 px. Changed pages 1-3 and 11-16 inspected; pages 4-10 byte-identical to the committed guide after rasterization. First review found missing arrow glyphs in two diagram labels of the stage 08 page; replaced with words, rebuilt and re-inspected.",
-      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide"
+      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide",
+      "rebuilt_after_publication": "Rebuilt with stage 08 CI data on 2026-10-29: only page 14 changed after rasterization; it was rendered at 1400 px and inspected, the other 15 pages were byte-identical."
     }
   },
   "publication": {
@@ -444,11 +448,26 @@
       }
     },
     "stage_08": {
-      "status": "locally_verified_uncommitted",
-      "commit": null,
+      "status": "published",
+      "commit": "e06e5f533604b717b05f3d68e512449cc8bb58da",
       "branch": "main",
-      "remote_ref": "not_published",
-      "github_actions": "not_verified"
+      "remote_ref": "verified",
+      "verified_on": "2026-10-29",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40905270723,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40905270723",
+        "all_steps": "success",
+        "postgres_step": "success",
+        "container_lab_job": "success",
+        "job_seconds": {
+          "checks": 49,
+          "container_lab": 59
+        },
+        "test_counts_in_ci_log": "not_verified",
+        "scenario_report_in_ci_log": "not_verified"
+      }
     }
   },
   "previous_stages": {
@@ -1768,5 +1787,5 @@
     "A restored source confirmation keeps aging; synced documents close after max_age until the next sync.",
     "Latency figures come from one laptop and a few fictional documents; they are not a capacity claim."
   ],
-  "guide_note": "Проверка этапа 08 29.10.2026: 621 passed (479 без PostgreSQL, 142 PostgreSQL); strict mypy 93 файла, Ruff, alembic check, ссылки. Контейнерный сценарий: 22/22 оценки до и после восстановления, утечка прав и сбой аудита обнаружены. Корпоративное развёртывание и живая модель не проверялись. Этап 08 локальный, без commit/push; CI — not_verified."
+  "guide_note": "Проверка этапа 08 29.10.2026: 621 passed (479 без PostgreSQL, 142 PostgreSQL); strict mypy 93 файла, Ruff, alembic check, ссылки. Контейнерный сценарий: 22/22 оценки до и после восстановления, утечка прав и сбой аудита обнаружены. Commit этапа e06e5f5 опубликован в main; CI 40905270723 — success, включая container-lab."
 }

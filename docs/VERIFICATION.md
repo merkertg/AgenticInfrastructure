@@ -6,7 +6,9 @@
 
 Проверено рабочее дерево `main` поверх
 `11ece3b2f13bcb6d8f67e0f43074a2fbcea535b3` (запись о публикации этапа 07),
-часовой пояс Asia/Yekaterinburg. Реализована **локальная Compose-лаборатория
+часовой пояс Asia/Yekaterinburg.
+Рабочее дерево стало commit этапа 08 `e06e5f533604b717b05f3d68e512449cc8bb58da`; его публикация проверена
+отдельно и описана ниже. Реализована **локальная Compose-лаборатория
 на вымышленных данных**, а не корпоративное развёртывание. Подробности —
 в [руководстве этапа](STAGE_08.md), решение — в
 [ADR 0008](adr/0008-container-lab-and-evaluations.md).
@@ -118,13 +120,25 @@ PDF пересобран командой `uv run --locked --group guide python 
 после растеризации. Первый просмотр нашёл два квадрата вместо стрелок в
 подписях схемы этапа 08 (в шрифте нет глифа); стрелки заменены словами,
 PDF пересобран, страница просмотрена снова.
+После публикации PDF пересобран с данными CI этапа 08: после растеризации
+изменилась только страница 14 (подпись и таблица публикаций), она отрисована
+при 1400 px и просмотрена; остальные 15 страниц совпали побайтово.
 
 ### Публикация и ограничения этапа 08
 
-Изменения этапа 08 остаются в рабочем дереве: commit и push в этой проверке
-не выполнялись. Удалённый ref и GitHub Actions нового этапа, включая задание
-`container-lab`, — **not_verified**. Результаты прежних публикаций ниже
-исторические.
+По указанию пользователя «Commit and push» изменения этапа оформлены commit
+`e06e5f533604b717b05f3d68e512449cc8bb58da` (`feat: add stage 08 container lab and evaluations`) и отправлены
+в `origin/main`. Перед этим `git fetch` подтвердил, что локальная и удалённая
+`main` совпадали на `11ece3b`; после push `git ls-remote` показал новый SHA.
+GitHub Actions проверен отдельно через GitHub API:
+[запуск 40905270723](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40905270723) для этого SHA завершён с `completed / success`. Оба
+задания — `success`: проверки (49 с, включая PostgreSQL-тесты) и
+`container-lab` (59 с). Шаг полного контейнерного сценария завершился успешно,
+а сценарий возвращает ненулевой код при любой неудачной проверке; значит, на
+чистом `ubuntu-24.04` сборка образа, Compose, оценки, учения, копия и
+восстановление прошли. Журналы шагов, включая JSON-отчёт и число тестов,
+не читались: загрузка журнала требует авторизации. Результаты прежних
+публикаций ниже исторические.
 
 Не проверены корпоративное развёртывание, TLS, SSO, менеджер секретов,
 отдельная роль БД без прав суперпользователя, публикация и сканирование
@@ -401,6 +415,7 @@ SHA-256 — `0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974`.
 | Документация 05 | `344aaeef2deddb66fa2a27359cd85f8b2f34524f`, совпадение с `origin/main` подтверждено `git ls-remote` 29 октября | [CI 40426585936](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40426585936), `completed / success`; все шаги, включая PostgreSQL, `success` |
 | 06 | `fdb19b19851193a012a024400fe7524d60ea7bd0`, совпадение с `origin/main` подтверждено `git ls-remote` после push 29 октября | [CI 40796064293](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40796064293), `completed / success` для этого SHA; все шаги, включая PostgreSQL, `success` |
 | 07 | `5f5bc7556da0e7a039be7fa9366700d5f22c7d89`, совпадение с `origin/main` подтверждено `git ls-remote` 29 октября | [CI 40814551812](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40814551812), `completed / success` для этого SHA; все шаги, включая PostgreSQL, `success` |
+| 08 | `e06e5f533604b717b05f3d68e512449cc8bb58da`, совпадение с `origin/main` подтверждено `git ls-remote` после push 29 октября | [CI 40905270723](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40905270723), `completed / success`; задания проверок и `container-lab`, все их шаги — `success` |
 
 **2026-10-27 — перенос в `main`.** `main` перемотана вперёд (fast-forward)
 до `474b04498cf92524f6f03950d7c77a12308ed563` — последнего commit `develop`

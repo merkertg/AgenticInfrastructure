@@ -401,3 +401,14 @@ strict mypy по 93 файлам, `alembic check`, проверка lock и сс
 иллюстрированное руководство. Результаты — в [отчёте](VERIFICATION.md).
 Корпоративное развёртывание не выполнялось. Этап 08 подготовлен локально;
 commit/push не выполнялись, CI нового этапа — `not_verified`.
+
+## 2026-10-29 — Публикация этапа 08
+
+По указанию пользователя «Commit and push» изменения этапа оформлены commit
+`e06e5f533604b717b05f3d68e512449cc8bb58da` (`feat: add stage 08 container lab and evaluations`)
+и отправлены в `origin/main`. Перед этим `git fetch` подтвердил, что локальная
+и удалённая `main` совпадали на `11ece3b`. `git ls-remote` после push показал
+тот же SHA. GitHub API: [запуск 40905270723](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40905270723) для этого SHA завершён
+с `completed / success`. Задание проверок (включая PostgreSQL) и новое задание
+`container-lab` — `success`; полный контейнерный сценарий прошёл на чистом
+`ubuntu-24.04`. Журналы шагов не читались: их загрузка требует авторизации.
