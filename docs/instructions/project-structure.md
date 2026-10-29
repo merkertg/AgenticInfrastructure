@@ -11,6 +11,10 @@ app/
   persistence_demo.py  # fictional PostgreSQL scenario
   credential_lab.py    # guarded issuance of fictional lab agent credentials
   intake_lab.py        # guarded all-or-nothing import of fictional text files
+  source_lab.py        # loopback fictional Handbook HTTP source
+  source_sync.py       # guarded source registration, synchronization and status
+  connectors/
+    handbook.py        # fixed-host GET adapter without redirects or proxies
   api/
     memory.py          # authenticated memory and context routes and schemas
     answers.py         # bounded agent answer route and schemas
@@ -22,12 +26,15 @@ app/
     retrieval.py       # query rules, BM25 ranking and context budgets
     versions.py        # deterministic version identifiers
     tool.py            # memory tool schema, argument, question and answer rules
+    strict_json.py     # shared duplicate-key and non-finite JSON rejection
+    source.py          # source contract, freshness and pure snapshot planning
   application/
     memory.py          # result contract for memory operations
     identity.py        # authenticated principal derived from a credential
     context.py         # context-search result contract
     agent.py           # provider contract, run limits and the bounded agent loop
     offline_model.py   # deterministic offline provider that quotes passages
+    source_sync.py     # bounded full snapshot collection and sync result contracts
   persistence/
     database.py        # PostgreSQL engine and migration helpers
     schema.py          # SQLAlchemy Core tables and relational constraints
@@ -36,6 +43,7 @@ app/
     context.py         # authorized candidate loading and context history
     intake.py          # validated all-or-nothing document intake
     runs.py            # agent run history without question or answer text
+    sources.py         # registration, atomic sync, grants and source-access gates
     lab.py             # guarded fictional bootstrap for a local lab
 tests/
   conftest.py          # isolated configuration and test client
@@ -51,6 +59,7 @@ migrations/
   versions/            # versioned schema changes
 alembic.ini
 fixtures/lab/          # invented UTF-8 texts for the intake and search lab
+fixtures/source/       # two fictional Handbook snapshots
 scripts/
   check_docs.py        # local Markdown target checks
   guide_data.py        # validated verification facts, independent of ReportLab
@@ -62,6 +71,7 @@ docs/
   STAGE_04.md          # detailed Russian identity and memory API guide
   STAGE_05.md          # detailed Russian intake and context search guide
   STAGE_06.md          # detailed Russian agent context tool guide
+  STAGE_07.md          # detailed Russian source synchronization guide
   ROADMAP.md           # stage boundaries and acceptance criteria
   APPROACH.md          # intended product and architecture
   CI_CD.md             # configured checks and delivery limits
@@ -84,7 +94,8 @@ or model SDK dependencies. The demo composes its objects without importing
 `app.main` or reading application settings. PostgreSQL persistence can be called
 by trusted Python code or by the authenticated HTTP routes. Permission-filtered
 lexical retrieval and a bounded agent loop with an offline provider are
-implemented; a live model provider and connectors remain future work.
+implemented, along with one read-only source adapter and a fictional HTTP lab;
+a live model provider and a real corporate connection remain future work.
 `app/application/agent.py` imports neither FastAPI nor SQLAlchemy: its search
 tool is a callable that the HTTP route binds to one agent and project.
 
@@ -117,3 +128,11 @@ The persistence path is `AccessRequest → MemoryStore → transaction/company l
 → stored objects → evaluate_access() → read/append + audit → commit → result`.
 A write also stores its idempotency fingerprint and original result. The adapter
 loads current grants before replay; it does not treat an old result as authority.
+
+
+The source path is `trusted source settings → HandbookClient → collect_snapshot()
+→ apply_snapshot() (company lock, current settings/account recheck, plan_sync(),
+versions, grants, confirmation and run history) → commit`. Fetching holds no
+company lock. Search filters expired sources in SQL before loading text;
+`source_denials()` also protects direct version reads, appends and final answer
+checks. A synchronization does not create employee identity or agent delegation.

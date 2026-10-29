@@ -4,9 +4,9 @@ import json
 import unicodedata
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
 
 from app.domain.retrieval import MAX_QUERY_CHARACTERS, query_terms, terms
+from app.domain.strict_json import loads_strict
 
 SEARCH_TOOL = "search_memory"
 DEFAULT_TOOL_ITEMS = 3
@@ -83,19 +83,6 @@ class SearchArguments:
     max_items: int
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    """Build a JSON object, refusing repeated keys that would hide a value."""
-    keys = [key for key, _ in pairs]
-    if len(keys) != len(set(keys)):
-        raise ValueError("duplicate key")
-    return dict(pairs)
-
-
-def _no_constant(name: str) -> Any:
-    """Refuse NaN and Infinity, which strict JSON does not allow."""
-    raise ValueError(f"unsupported constant {name}")
-
-
 def parse_search_call(name: str, arguments: str) -> SearchArguments:
     """Accept only search_memory with a valid query and optional item count.
 
@@ -109,10 +96,8 @@ def parse_search_call(name: str, arguments: str) -> SearchArguments:
     if len(arguments) > MAX_ARGUMENT_CHARACTERS:
         raise ToolCallRejected(ToolRejection.ARGUMENTS_TOO_LARGE)
     try:
-        values = json.loads(
-            arguments, object_pairs_hook=_unique_object, parse_constant=_no_constant
-        )
-    except (ValueError, RecursionError):
+        values = loads_strict(arguments)
+    except ValueError:
         raise ToolCallRejected(ToolRejection.INVALID_JSON) from None
     if not isinstance(values, dict) or not set(values) <= _ARGUMENTS:
         raise ToolCallRejected(ToolRejection.INVALID_ARGUMENTS)

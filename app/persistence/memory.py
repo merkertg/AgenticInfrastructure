@@ -45,6 +45,7 @@ from app.persistence import schema as db
 from app.persistence.context import ScopeSnapshot, authorized_versions, record_context
 from app.persistence.credentials import credential_is_current
 from app.persistence.runs import record_run
+from app.persistence.sources import source_denials
 
 
 def _row(
@@ -129,7 +130,7 @@ class MemoryStore:
         credential_id: str | None,
         occurred_at: datetime,
     ) -> tuple[AccessDecision, DocumentVersion | None]:
-        """Lock the company and evaluate current database records before any replay."""
+        """Lock the company, then evaluate current records and the source gate."""
         company_row = (
             connection.execute(
                 select(db.companies)
@@ -209,6 +210,16 @@ class MemoryStore:
             version=version,
             grants=tuple(Grant(**_actions(row)) for row in grant_rows),
         )
+        if decision.allowed:
+            denial = source_denials(
+                connection,
+                request.company_id,
+                (request.document_id,),
+                request.action,
+                occurred_at,
+            ).get(request.document_id)
+            if denial is not None:
+                decision = AccessDecision(request=request, allowed=False, reason=denial)
         return decision, version
 
     def _audit(
@@ -531,7 +542,9 @@ class MemoryStore:
                     request=request, outcome=ContextOutcome.DENIED, reason=reason
                 )
             else:
-                versions, truncated = authorized_versions(connection, request, scope)
+                versions, truncated = authorized_versions(
+                    connection, request, scope, occurred_at
+                )
                 candidates = tuple(
                     Candidate(
                         document_id=version.document_id,

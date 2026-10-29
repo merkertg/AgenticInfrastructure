@@ -1,14 +1,13 @@
 {
   "schema_version": 4,
-  "stage": "06",
-  "checked_at": "2026-10-29T05:36:59+05:00",
-  "scope": "One server-scoped search_memory tool with strict arguments; bounded provider-neutral agent loop; deterministic offline extractive provider; citations limited to this run's search results; scope check before the model and final scope and cited-version recheck before the answer; metadata-only run history",
+  "stage": "07",
+  "checked_at": "2026-10-29T08:45:07+05:00",
+  "scope": "One fictional read-only Handbook HTTP v1 source; strict bounded full snapshots; explicit source-user mapping; atomic version, deletion, read-grant and run-history reconciliation under the company lock; expiring source access in reads, search and cited answers; guarded register/run/status CLI and fictional loopback server",
   "revision": {
     "branch": "main",
-    "base_commit": "344aaeef2deddb66fa2a27359cd85f8b2f34524f",
-    "state": "published_code_commit",
-    "note": "Local checks ran on the working tree that became the code commit; publication evidence follows in a later documentation commit without application changes.",
-    "code_commit": "fdb19b19851193a012a024400fe7524d60ea7bd0"
+    "base_commit": "01e01b0063d3d0327893a0021d8fac17d474a37a",
+    "state": "locally_verified_uncommitted",
+    "note": "No commit or push in this continuation; previous publication records are historical and were not revalidated."
   },
   "runtime": {
     "python": "3.12.15",
@@ -35,67 +34,47 @@
   },
   "environment": {
     "postgres": "PostgreSQL 17.10 (Homebrew)",
-    "temporary_cluster": "new cluster in the session temporary directory; LC_ALL=C; Unix socket disabled because the directory path is too long for a socket",
-    "address": "127.0.0.1:55435",
+    "temporary_cluster": "new isolated cluster under /private/tmp; LC_ALL=C; Unix sockets disabled; stopped after verification",
+    "address": "127.0.0.1:55437",
     "databases": [
       "agentic_test",
-      "agentic_stage06_lab"
+      "agentic_stage07_lab",
+      "agentic_stage07_final_lab"
     ]
   },
   "checks": {
     "sync_locked": {
       "status": "passed",
-      "offline": true,
-      "new_packages_installed": 0,
-      "note": "removed the optional guide group until the explicit PDF rebuild"
+      "guide_group": true,
+      "resolved_packages": 43,
+      "installed_packages_checked": 39
     },
     "pytest": {
       "status": "passed",
-      "tests_passed": 460,
+      "tests_passed": 591,
       "without_postgres": {
-        "passed": 339,
-        "previous_stages": 243,
-        "tool_rules": 34,
-        "agent_runtime_and_offline_provider": 49,
-        "answer_api": 12,
-        "guide_data": 1
+        "passed": 451
       },
       "postgres": {
-        "passed": 121,
-        "previous_stages": 94,
-        "migrations": 6,
-        "agent_runs": 21,
-        "note": "previous_stages excludes migrations: memory store 24, constraints 6, credentials 10, HTTP memory 25, intake 8, context 21"
+        "passed": 140
       },
       "without_test_database_url": {
-        "passed": 339,
-        "skipped": 121,
+        "passed": 451,
+        "skipped": 140,
         "counts_as_postgres_check": false
       },
-      "deprecation_warnings_as_errors": true,
-      "concurrency_repeats": {
-        "runs": 3,
-        "passed_per_run": 3
-      },
-      "mutation_checks": {
-        "final_cited_version_recheck_removed": "1 test failed (revocation before the answer)",
-        "route_scope_check_before_model_removed": "1 test failed (model must not start outside scope)",
-        "extra_tool_arguments_accepted": "5 tests failed (project_id/employee_id in domain, loop and PostgreSQL)",
-        "citations_outside_run_accepted": "7 tests failed (invented references in loop, PostgreSQL and HTTP)",
-        "source_restored": true,
-        "restore_check": "byte comparison with saved copies"
-      }
+      "deprecation_warnings_as_errors": true
     },
     "ruff_check": {
       "status": "passed"
     },
     "ruff_format": {
       "status": "passed",
-      "files": 100
+      "files": 117
     },
     "mypy": {
       "status": "passed",
-      "source_files": 74,
+      "source_files": 88,
       "paths": [
         "app",
         "tests",
@@ -109,82 +88,111 @@
     },
     "migration": {
       "status": "passed",
-      "revision": "0004_agent_runs",
-      "application_tables": 16,
+      "revision": "0005_source_sync",
+      "application_tables": 20,
       "alembic_check": "No new upgrade operations detected.",
-      "downgrade_to_0003_and_upgrade_test": true
-    },
-    "lab_answers": {
-      "status": "passed",
-      "database": "fresh local agentic_stage06_lab",
-      "imported": {
-        "finance": [
-          "expense-guide",
-          "travel-policy"
-        ],
-        "engineering": [
-          "deploy-notes"
-        ]
-      }
+      "downgrade_and_reupgrade": "8 migration tests; source downgrade deactivates mirrored documents and all their grants before removing source metadata; ordinary memory remains active"
     },
     "http_network_smoke": {
+      "database": "agentic_stage07_final_lab",
+      "actual_loopback_http": true,
+      "first_sync": {
+        "listed": 4,
+        "fetched": 4,
+        "created": 4,
+        "updated": 0,
+        "unchanged": 0,
+        "restored": 0,
+        "deleted": 0,
+        "withheld": 0,
+        "unmapped_readers": 2,
+        "grants_added": 4,
+        "grants_revoked": 0
+      },
+      "initial_answer": "200 answered; handbook:travel-desk@r1; offsets reproduced",
+      "replay": {
+        "listed": 4,
+        "fetched": 0,
+        "created": 0,
+        "updated": 0,
+        "unchanged": 4,
+        "restored": 0,
+        "deleted": 0,
+        "withheld": 0,
+        "unmapped_readers": 2,
+        "grants_added": 0,
+        "grants_revoked": 0
+      },
+      "denials": {
+        "synced_write": 404,
+        "other_employee_without_delegation": 404,
+        "invalid_token": 401
+      },
+      "changed_sync": {
+        "listed": 4,
+        "fetched": 2,
+        "created": 0,
+        "updated": 1,
+        "unchanged": 2,
+        "restored": 0,
+        "deleted": 1,
+        "withheld": 1,
+        "unmapped_readers": 2,
+        "grants_added": 0,
+        "grants_revoked": 2
+      },
+      "changed_answer": "200 answered; handbook:travel-desk@r2; version 2; old permitted citation remains readable",
+      "revoked_answer": "200 unanswered; no office-access evidence",
+      "deleted_document": "vendor-review absent from context",
+      "outage": "failed/unavailable; previous snapshot readable within 60-second window",
+      "expired": "status confirmed=false; version read 404; answer 200 unanswered",
+      "expiry_method": "aged confirmed_at by 61 seconds under company lock in disposable lab; no wall-clock wait",
+      "history": "no plain source/agent tokens, document text or question text",
+      "server_logs": "no plain source/agent tokens",
+      "servers_stopped": true,
       "status": "passed",
-      "server": "uvicorn app.main:app --host 127.0.0.1 --port 8005",
-      "provider": "offline-extractive-v1",
-      "responses": {
-        "GET /health": 200,
-        "POST finance answers, finance agent, travel limit question": "200 answered, 3 citations (travel-policy 2 and 3, expense-guide 2)",
-        "GET cited versions": "200; content[start:end] reproduces the cited paragraphs",
-        "POST finance answers, finance agent, zebra": "200 unanswered, answer null",
-        "POST engineering answers, finance agent": 404,
-        "POST engineering answers, engineering agent, same travel question": "200 answered, 2 citations of deploy-notes only; embedded instruction quoted as data",
-        "POST engineering answers, engineering agent, deployments question": "200 answered, 1 citation",
-        "POST finance answers, engineering agent": 404,
-        "POST answers, unknown token": 401,
-        "POST answers with project_id in body": 422,
-        "GET answers": 405
-      },
-      "cache_control": "no-store",
-      "history_after": {
-        "agent_runs": 6,
-        "answered": 3,
-        "unanswered": 1,
-        "denied_without_model_steps": 2,
-        "agent_run_searches": 4,
-        "agent_run_citations": 6,
-        "context_requests": 4,
-        "rows_with_credential_id": 6
-      },
-      "question_or_content_in_history": false,
-      "token_in_server_log": false,
-      "server_stopped": true
+      "provider": "offline-extractive-v1"
+    },
+    "timeout_regressions": {
+      "status": "passed",
+      "cases": [
+        "final listing and final content at or past collection deadline",
+        "trickled HTTP headers",
+        "late connection after cancellation sends no request",
+        "bounded network worker capacity",
+        "Connection: close and slow chunk-size extension releases worker slot"
+      ]
+    },
+    "live_corporate_source": {
+      "status": "not_run",
+      "reason": "fictional HTTP laboratory only; no corporate service credentials used"
     },
     "live_model": {
       "status": "not_run",
-      "reason": "no live provider is implemented in this stage"
+      "reason": "offline provider only"
     },
     "documentation_links": {
       "status": "passed",
-      "local_links": 187,
-      "markdown_files": 25
+      "local_links": 213,
+      "markdown_files": 27
     },
     "whitespace": {
       "status": "passed",
-      "scope": "tracked changes and all new files"
+      "scope": "tracked diff and all new files checked separately",
+      "new_files_checked": 19
     },
     "function_documentation": {
       "status": "passed",
-      "definitions_checked": 532,
+      "definitions_checked": 736,
       "scope": "all functions and classes in app, tests, scripts and migrations"
     },
     "pdf": {
       "status": "passed",
       "language": "ru",
-      "pages": 13,
-      "text_extraction": "passed",
-      "visual_review": "all pages rendered at 1400 px and inspected; three defects (missing arrow glyph in the mono font, publication label, outdated FastAPI box label) fixed, changed pages re-inspected and the rest compared on a contact sheet",
-      "guide_packages": "reportlab 4.4.9, pillow 13.0.0 and charset-normalizer 3.5.2 downloaded with locked hashes because the offline uv cache lacked them",
-      "rebuilt_after_publication": "page 11 re-inspected with stage 06 CI evidence; other pages compared on a contact sheet"
+      "pages": 15,
+      "text_extraction": "passed with pdftotext -layout; stage07, test counts and publication status present",
+      "visual_review": "All 15 pages rendered at 1400 px and inspected. Final wording and limitations changed only pages 10 and 15; both re-rendered and inspected; other 13 pages pixel-compared unchanged. No clipping or overlap observed.",
+      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide"
     }
   },
   "publication": {
@@ -306,6 +314,13 @@
         "postgres_step": "success",
         "test_counts_in_ci_log": "not_verified"
       }
+    },
+    "stage_07": {
+      "status": "locally_verified_uncommitted",
+      "commit": null,
+      "branch": "main",
+      "remote_ref": "not_published",
+      "github_actions": "not_verified"
     }
   },
   "previous_stages": {
@@ -1188,6 +1203,222 @@
           "note": "Stage 05 CI evidence above was already present in the unfinished documentation and was not revalidated during this documentation update."
         }
       }
+    },
+    "stage_06": {
+      "schema_version": 4,
+      "stage": "06",
+      "checked_at": "2026-10-29T05:36:59+05:00",
+      "scope": "One server-scoped search_memory tool with strict arguments; bounded provider-neutral agent loop; deterministic offline extractive provider; citations limited to this run's search results; scope check before the model and final scope and cited-version recheck before the answer; metadata-only run history",
+      "revision": {
+        "branch": "main",
+        "base_commit": "344aaeef2deddb66fa2a27359cd85f8b2f34524f",
+        "state": "published_code_commit",
+        "note": "Local checks ran on the working tree that became the code commit; publication evidence follows in a later documentation commit without application changes.",
+        "code_commit": "fdb19b19851193a012a024400fe7524d60ea7bd0"
+      },
+      "runtime": {
+        "python": "3.12.15",
+        "uv": "0.12.23"
+      },
+      "packages": {
+        "fastapi": "0.143.0",
+        "pydantic": "2.14.0",
+        "pydantic-settings": "2.15.0",
+        "uvicorn": "0.54.0",
+        "pytest": "9.1.1",
+        "ruff": "0.16.10",
+        "mypy": "2.4.0",
+        "sqlalchemy": "2.1.4",
+        "psycopg": "3.3.6",
+        "alembic": "1.20.0",
+        "reportlab": "4.4.9",
+        "pillow": "13.0.0"
+      },
+      "lock": {
+        "sha256": "0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974",
+        "exclude_newer": "2026-10-10T00:00:00Z",
+        "unchanged_since_documentation_update": true
+      },
+      "environment": {
+        "postgres": "PostgreSQL 17.10 (Homebrew)",
+        "temporary_cluster": "new cluster in the session temporary directory; LC_ALL=C; Unix socket disabled because the directory path is too long for a socket",
+        "address": "127.0.0.1:55435",
+        "databases": [
+          "agentic_test",
+          "agentic_stage06_lab"
+        ]
+      },
+      "checks": {
+        "sync_locked": {
+          "status": "passed",
+          "offline": true,
+          "new_packages_installed": 0,
+          "note": "removed the optional guide group until the explicit PDF rebuild"
+        },
+        "pytest": {
+          "status": "passed",
+          "tests_passed": 460,
+          "without_postgres": {
+            "passed": 339,
+            "previous_stages": 243,
+            "tool_rules": 34,
+            "agent_runtime_and_offline_provider": 49,
+            "answer_api": 12,
+            "guide_data": 1
+          },
+          "postgres": {
+            "passed": 121,
+            "previous_stages": 94,
+            "migrations": 6,
+            "agent_runs": 21,
+            "note": "previous_stages excludes migrations: memory store 24, constraints 6, credentials 10, HTTP memory 25, intake 8, context 21"
+          },
+          "without_test_database_url": {
+            "passed": 339,
+            "skipped": 121,
+            "counts_as_postgres_check": false
+          },
+          "deprecation_warnings_as_errors": true,
+          "concurrency_repeats": {
+            "runs": 3,
+            "passed_per_run": 3
+          },
+          "mutation_checks": {
+            "final_cited_version_recheck_removed": "1 test failed (revocation before the answer)",
+            "route_scope_check_before_model_removed": "1 test failed (model must not start outside scope)",
+            "extra_tool_arguments_accepted": "5 tests failed (project_id/employee_id in domain, loop and PostgreSQL)",
+            "citations_outside_run_accepted": "7 tests failed (invented references in loop, PostgreSQL and HTTP)",
+            "source_restored": true,
+            "restore_check": "byte comparison with saved copies"
+          }
+        },
+        "ruff_check": {
+          "status": "passed"
+        },
+        "ruff_format": {
+          "status": "passed",
+          "files": 100
+        },
+        "mypy": {
+          "status": "passed",
+          "source_files": 74,
+          "paths": [
+            "app",
+            "tests",
+            "scripts",
+            "migrations"
+          ]
+        },
+        "lock_offline": {
+          "status": "passed",
+          "resolved_packages": 43
+        },
+        "migration": {
+          "status": "passed",
+          "revision": "0004_agent_runs",
+          "application_tables": 16,
+          "alembic_check": "No new upgrade operations detected.",
+          "downgrade_to_0003_and_upgrade_test": true
+        },
+        "lab_answers": {
+          "status": "passed",
+          "database": "fresh local agentic_stage06_lab",
+          "imported": {
+            "finance": [
+              "expense-guide",
+              "travel-policy"
+            ],
+            "engineering": [
+              "deploy-notes"
+            ]
+          }
+        },
+        "http_network_smoke": {
+          "status": "passed",
+          "server": "uvicorn app.main:app --host 127.0.0.1 --port 8005",
+          "provider": "offline-extractive-v1",
+          "responses": {
+            "GET /health": 200,
+            "POST finance answers, finance agent, travel limit question": "200 answered, 3 citations (travel-policy 2 and 3, expense-guide 2)",
+            "GET cited versions": "200; content[start:end] reproduces the cited paragraphs",
+            "POST finance answers, finance agent, zebra": "200 unanswered, answer null",
+            "POST engineering answers, finance agent": 404,
+            "POST engineering answers, engineering agent, same travel question": "200 answered, 2 citations of deploy-notes only; embedded instruction quoted as data",
+            "POST engineering answers, engineering agent, deployments question": "200 answered, 1 citation",
+            "POST finance answers, engineering agent": 404,
+            "POST answers, unknown token": 401,
+            "POST answers with project_id in body": 422,
+            "GET answers": 405
+          },
+          "cache_control": "no-store",
+          "history_after": {
+            "agent_runs": 6,
+            "answered": 3,
+            "unanswered": 1,
+            "denied_without_model_steps": 2,
+            "agent_run_searches": 4,
+            "agent_run_citations": 6,
+            "context_requests": 4,
+            "rows_with_credential_id": 6
+          },
+          "question_or_content_in_history": false,
+          "token_in_server_log": false,
+          "server_stopped": true
+        },
+        "live_model": {
+          "status": "not_run",
+          "reason": "no live provider is implemented in this stage"
+        },
+        "documentation_links": {
+          "status": "passed",
+          "local_links": 187,
+          "markdown_files": 25
+        },
+        "whitespace": {
+          "status": "passed",
+          "scope": "tracked changes and all new files"
+        },
+        "function_documentation": {
+          "status": "passed",
+          "definitions_checked": 532,
+          "scope": "all functions and classes in app, tests, scripts and migrations"
+        },
+        "pdf": {
+          "status": "passed",
+          "language": "ru",
+          "pages": 13,
+          "text_extraction": "passed",
+          "visual_review": "all pages rendered at 1400 px and inspected; three defects (missing arrow glyph in the mono font, publication label, outdated FastAPI box label) fixed, changed pages re-inspected and the rest compared on a contact sheet",
+          "guide_packages": "reportlab 4.4.9, pillow 13.0.0 and charset-normalizer 3.5.2 downloaded with locked hashes because the offline uv cache lacked them",
+          "rebuilt_after_publication": "page 11 re-inspected with stage 06 CI evidence; other pages compared on a contact sheet"
+        }
+      },
+      "not_implemented": [
+        "live_model_provider",
+        "streaming_answers",
+        "semantic_or_vector_search",
+        "persisted_search_index",
+        "result_cache",
+        "http_document_intake",
+        "document_deletion_api",
+        "corporate_identity_provider",
+        "rate_limiting",
+        "tls",
+        "corporate_connector",
+        "containers"
+      ],
+      "limitations": [
+        "The offline provider quotes retrieved passages; it does not reason.",
+        "Every tool call is a full permission-filtered search; latency grows with calls and project size.",
+        "The loop cannot interrupt a provider that blocks; a live provider must apply its own timeout.",
+        "No rate limit per agent or employee; the synchronous route holds a worker for the whole run.",
+        "Question and query digests in history can be guessed for short inputs.",
+        "Searches already committed stay recorded if a later step fails with a storage error.",
+        "Bearer tokens impersonate their agent until expiry or revocation; loopback HTTP only.",
+        "Database owners can modify documents, grants, credentials and history directly.",
+        "PostgreSQL temporary native lab is not a deployed service."
+      ],
+      "guide_note": "Проверка этапа 06 29.10.2026: 460 passed (339 без БД, 121 PostgreSQL), strict mypy 74 файла, Ruff, alembic check, ссылки и сетевой сценарий. Настоящая модель не вызывалась. Commit этапа fdb19b1 опубликован в main; CI 40796064293 — success."
     }
   },
   "not_implemented": [
@@ -1201,19 +1432,27 @@
     "corporate_identity_provider",
     "rate_limiting",
     "tls",
-    "corporate_connector",
-    "containers"
+    "containers",
+    "verified_real_corporate_source",
+    "automatic_source_sync_scheduler",
+    "http_source_administration",
+    "physical_source_history_erasure"
   ],
   "limitations": [
+    "The source is a fictional Handbook HTTP v1 laboratory; real corporate source behavior and ACL mapping are not verified.",
+    "Source rights can remain usable until the last successful snapshot confirmation expires (60 to 86400 seconds from sync start).",
+    "Listing consistency and immutable revision contents are source-contract assumptions; there is no global snapshot ID or ETag.",
+    "An OS resolver may outlive a timed-out caller; at most four process-wide daemon network workers may remain occupied.",
+    "Source deletion closes access to all versions but does not physically erase historical version bodies.",
+    "Downgrade deactivates mirrors and their grants; re-upgrade cannot restore source ownership without trusted preparation.",
     "The offline provider quotes retrieved passages; it does not reason.",
     "Every tool call is a full permission-filtered search; latency grows with calls and project size.",
-    "The loop cannot interrupt a provider that blocks; a live provider must apply its own timeout.",
-    "No rate limit per agent or employee; the synchronous route holds a worker for the whole run.",
+    "The agent loop cannot interrupt a blocking model provider; a live provider must apply its own timeout.",
+    "No rate limit per agent or employee; the synchronous answer route holds a worker for the whole run.",
     "Question and query digests in history can be guessed for short inputs.",
-    "Searches already committed stay recorded if a later step fails with a storage error.",
-    "Bearer tokens impersonate their agent until expiry or revocation; loopback HTTP only.",
+    "Bearer tokens impersonate their agent until expiry or revocation; memory HTTP is loopback only.",
     "Database owners can modify documents, grants, credentials and history directly.",
-    "PostgreSQL temporary native lab is not a deployed service."
+    "The temporary native PostgreSQL lab is not a deployed service."
   ],
-  "guide_note": "Проверка этапа 06 29.10.2026: 460 passed (339 без БД, 121 PostgreSQL), strict mypy 74 файла, Ruff, alembic check, ссылки и сетевой сценарий. Настоящая модель не вызывалась. Commit этапа fdb19b1 опубликован в main; CI 40796064293 — success."
+  "guide_note": "Проверка этапа 07 29.10.2026: 591 passed (451 без PostgreSQL, 140 PostgreSQL); strict mypy 88 файлов, Ruff, alembic check, ссылки и сквозной сетевой сценарий. Источник Handbook вымышленный; корпоративный сервис и настоящая модель не подключались. Этап 07 локальный, без commit/push; CI — not_verified. Прежние публикации ниже исторические."
 }

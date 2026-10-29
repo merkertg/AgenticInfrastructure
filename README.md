@@ -5,15 +5,17 @@ employees. It implements the shared-memory alternative of the
 `#AgenticInfrastructure` assignment. All companies, employees and documents are
 fictional laboratory data.
 
-**Stages 01–06 are implemented:** FastAPI, deterministic access policy,
+**Stages 01–07 are implemented:** FastAPI, deterministic access policy,
 PostgreSQL version storage and audit, hashed bearer credentials, trusted text
 intake, permission-filtered BM25 context search, and a bounded agent that
 answers through one server-scoped memory tool with citation checks. The server
 derives the employee from its registered agent and checks current employee
 rights and agent delegation before reading content and again before returning
 an answer. Reads, writes, searches and agent runs require transactional audit.
-The model provider is a deterministic offline one; a live model, corporate
-connectors and container delivery remain planned. Actual checks and publication
+A read-only Handbook HTTP adapter synchronizes fictional source documents and
+reader grants; expired source confirmation blocks reads and derived answers.
+The model provider is deterministic and offline; a real corporate connection,
+a live model and container delivery remain unverified or planned. Actual checks and publication
 evidence are recorded separately in [verification](docs/VERIFICATION.md).
 
 Start with the [quickstart](docs/instructions/quickstart.md). The health service
@@ -30,7 +32,7 @@ laboratory need PostgreSQL and server-issued fictional agent credentials.
 | 04 | Hashed agent credentials and authenticated memory API | Implemented |
 | 05 | Text intake, permission-filtered BM25 and verifiable context references | Implemented |
 | 06 | Bounded context tool for an agent and offline model provider | Implemented |
-| 07 | One corporate source with read-only synchronization | Planned |
+| 07 | Read-only Handbook HTTP source, synchronization and freshness gates | Implemented |
 | 08 | Containers, evaluations, backup and release | Planned |
 
 See the [detailed roadmap and completion criteria](docs/ROADMAP.md).
@@ -40,7 +42,7 @@ See the [detailed roadmap and completion criteria](docs/ROADMAP.md).
 Short English instructions ([docs/instructions/](docs/instructions/)):
 
 - [Quickstart](docs/instructions/quickstart.md): requirements, local startup and the PostgreSQL laboratory
-- [Usage](docs/instructions/usage.md): settings, offline policy, persistence, credentials, version API, document intake, context search and agent answers
+- [Usage](docs/instructions/usage.md): settings, offline policy, persistence, credentials, version API, document intake, context search, agent answers and source synchronization
 - [Testing and verification](docs/instructions/testing.md): unit tests, isolated PostgreSQL tests, lint, types and documentation checks
 - [CI and publication](docs/instructions/ci-and-delivery.md): workflow, local checks and safe publication
 - [Project structure](docs/instructions/project-structure.md): current modules and request flow
@@ -53,6 +55,7 @@ Detailed learning guides in Russian:
 - [Stage 04: agent identity and memory API](docs/STAGE_04.md)
 - [Stage 05: document intake and context search](docs/STAGE_05.md)
 - [Stage 06: bounded agent context tool](docs/STAGE_06.md)
+- [Stage 07: read-only source synchronization](docs/STAGE_07.md)
 - [CI/CD guide](docs/CI_CD.md)
 - [Illustrated PDF guide](docs/guide/agentic-infrastructure-guide.pdf) and [rebuild instructions](docs/guide/README.md)
 - [Verification report](docs/VERIFICATION.md) and [machine-readable evidence](docs/guide/verification.json)
@@ -66,4 +69,5 @@ Design and history:
 - [Agent credentials](docs/adr/0004-agent-credentials-memory-api.md)
 - [Permission-filtered context](docs/adr/0005-permission-filtered-context.md)
 - [Bounded agent context tool](docs/adr/0006-bounded-agent-context-tool.md)
+- [Read-only source synchronization](docs/adr/0007-read-only-source-sync.md)
 - [Development log](docs/DEVELOPMENT_LOG.md)

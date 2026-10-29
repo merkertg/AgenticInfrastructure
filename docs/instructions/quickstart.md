@@ -54,7 +54,8 @@ Create an isolated local PostgreSQL database, then follow
 [the persistence setup](usage.md#postgresql-persistence),
 [issue fictional agent credentials](usage.md#authenticated-memory-api),
 [import and search documents](usage.md#document-intake-and-context-search) and
-[ask the offline agent](usage.md#agent-answers).
+[ask the offline agent](usage.md#agent-answers) and
+[synchronize the fictional source](usage.md#read-only-source-synchronization).
 The [Stage 03 guide](../STAGE_03.md) includes native PostgreSQL setup.
 Use separate databases ending in `_lab` for the lab and `_test` for tests.
 

@@ -38,8 +38,10 @@ separate configuration. `APP_ENV` does not change permissions or install an
 identity provider; leave debug disabled when handling any sensitive information.
 
 The [roadmap](../ROADMAP.md) describes future shared-memory behavior. HTTP
-memory access currently covers stored versions and context search over
-fictional lab documents; no model, agent tool or corporate source exists.
+memory access covers versions, context search and a bounded agent with an
+offline provider over fictional documents. A read-only Handbook HTTP adapter
+and fictional source lab are implemented; no real corporate service or live
+model has been verified.
 
 For the Stage 02 access-policy demonstration, run from the repository root:
 
@@ -418,3 +420,107 @@ the question's SHA-256; `agent_run_searches` links the run's
 answer, passage text or model transcript is stored or logged. There is no rate
 limit, streaming or live model provider yet, and a blocking provider cannot be
 interrupted inside the loop.
+
+
+## Read-only source synchronization
+
+Stage 07 implements the fictional `handbook-http-v1` contract. The source is
+registered by trusted lab setup, never by an agent or document. The CLI accepts
+only an explicit local `DATABASE_URL` ending in `_lab`, without query options.
+It does not load `.env`. No HTTP source-management route or background scheduler
+is added.
+
+### Start and register
+
+Use a new lab database and bootstrap it as above. Generate a temporary token;
+use the same value in the source-server terminal and the sync terminal without
+saving it in a file or Git:
+
+```bash
+export DATABASE_URL='postgresql+psycopg://agentic@127.0.0.1:55435/agentic_stage07_lab'
+uv run --locked python -m app.persistence_demo --setup
+export SOURCE_TOKEN="$(openssl rand -hex 24)"
+uv run --locked python -m app.source_lab fixtures/source/handbook-1.json --port 8105
+```
+
+In the sync terminal, set `DATABASE_URL` and the same `SOURCE_TOKEN`, then run:
+
+```bash
+uv run --locked python -m app.source_sync register handbook --project finance \
+  --base-url http://127.0.0.1:8105 --space alpha-handbook --prefix hb- \
+  --max-age 900 --account u-fin=fin-user --account u-eng=eng-user
+uv run --locked python -m app.source_sync run handbook
+uv run --locked python -m app.source_sync status handbook
+uv run --locked python -m app.source_sync run handbook
+```
+
+Registration is one-time. `u-fin` maps to the existing employee `fin-user` and
+receives read grants for `hb-travel-desk`, `hb-office-access` and
+`hb-vendor-review`. `u-eng` maps to `eng-user`, but that does not give the
+engineering agent delegation to the finance project. Groups and `u-partner`
+have no mapping and grant nothing. A retry reads the full listing and current
+ACLs but fetches no unchanged text or duplicate version.
+
+Issue a `fin-agent` credential, start the API and search for `train tickets` or
+`visitor badges` with the existing context route. Citations identify sources
+such as `handbook:travel-desk@r1`. Memory append attempts to synced documents
+are denied even if a manual write grant exists.
+
+### Change, delete, revoke and fail
+
+Stop the source server with `Ctrl+C`, then restart it with the same token:
+
+```bash
+uv run --locked python -m app.source_lab fixtures/source/handbook-2.json --port 8105
+```
+
+Run synchronization again. `hb-travel-desk` gets a second version;
+`hb-vendor-review` becomes inactive; `fin-user` loses `hb-office-access`;
+`hb-budget-draft` is withheld with `control_characters`. Old stored versions
+retain their original text but are subject to current document rights and
+source confirmation. Repeating this snapshot creates no duplicate versions.
+
+Stop the source server and run synchronization again: it exits `1`, records a
+failure code and applies nothing. Inspect `status`: `last_run` describes the
+failure while `confirmed_at` stays unchanged. Before `confirmed_until`, the
+previous snapshot can remain readable. At or after that time, synced documents
+are excluded from search and direct version reads are denied. Successful
+resynchronization restores confirmation. For a short expiry exercise register
+an independent fresh lab with `--max-age 60`; expiry is measured from sync start.
+
+### Contract and limits
+
+The adapter sends GET requests only to the registered base URL and space:
+`/v1/spaces/{space}/documents?cursor=...` and
+`/v1/spaces/{space}/documents/{id}/content?revision=...`. Listing JSON has exactly
+`documents` and `next_cursor`; document entries have `id`, `title`, `revision`
+and `readers`; each reader has `kind` and `id`. Individual users are mapped by
+trusted setup; unknown users and reader kinds grant nothing. Texts use the
+Stage 05 UTF-8 rules. Revisions must change whenever source text changes.
+
+HTTPS uses certificate validation; plain HTTP is allowed only on loopback for
+the lab. Redirects and environment proxies are not used. The token comes from
+`SOURCE_TOKEN`, is sent only to that configured target and is not stored in the
+database, report, history or model input. Register a source account with actual
+read-only privileges when adapting to a real service; this lab cannot prove
+server-side token scope.
+
+Limits: 20 listing pages, 100 documents per page, 200 documents per snapshot,
+256 KiB per page, 100 readers per document, 1,000 account mappings, 5 seconds per
+request and 60 seconds for snapshot collection. Each text is limited to 64 KiB
+and 20,000 characters; the project still holds at most 500 documents. Confirmation
+windows are 60–86,400 seconds. A daemon worker bounds the caller
+wait across DNS, connection, headers and body. Timed-out sockets are shut down
+when available; a canceled late connection does not send the authenticated
+request. An OS resolver call can linger, with four worker slots per process;
+this is not OS-level resolver cancellation. The collector checks its deadline
+before and after requests and before returning the snapshot.
+
+A complete snapshot is applied under the company lock in one transaction with
+its run record. Listing errors and fetch failures apply nothing; invalid text
+withholds that document while valid entries and ACL changes apply atomically.
+No cache or persisted index exists. Run history contains counts, timestamps and
+failure codes, not document text or tokens. `status` exposes document-state
+counts, up to 50 withheld IDs/codes and the latest run for trusted operators.
+Real corporate connectivity and permission semantics remain unverified. See
+[Stage 07](../STAGE_07.md) and [ADR 0007](../adr/0007-read-only-source-sync.md).

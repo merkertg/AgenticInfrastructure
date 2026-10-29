@@ -1,0 +1,58 @@
+{
+  "space": "alpha-handbook",
+  "page_size": 2,
+  "documents": [
+    {
+      "id": "travel-desk",
+      "title": "Travel desk rules",
+      "revision": "r2",
+      "readers": [
+        {
+          "kind": "user",
+          "id": "u-fin"
+        }
+      ],
+      "content": "Fictional Alpha travel desk rules.\n\nTrain tickets are booked through the travel desk three days ahead.\n\nTaxi rides above 30 credits need a receipt."
+    },
+    {
+      "id": "office-access",
+      "title": "Office access",
+      "revision": "r1",
+      "readers": [
+        {
+          "kind": "user",
+          "id": "u-eng"
+        },
+        {
+          "kind": "group",
+          "id": "g-everyone"
+        }
+      ],
+      "content": "Fictional Alpha office access.\n\nVisitor badges are issued at the front desk.\n\nLost badges must be reported within one day."
+    },
+    {
+      "id": "partner-note",
+      "title": "Partner note",
+      "revision": "r1",
+      "readers": [
+        {
+          "kind": "user",
+          "id": "u-partner"
+        }
+      ],
+      "content": "Fictional partner note.\n\nThis note is shared only with an account that has no mapping."
+    },
+    {
+      "id": "budget-draft",
+      "title": "Budget draft",
+      "revision": "r1",
+      "readers": [
+        {
+          "kind": "user",
+          "id": "u-fin"
+        }
+      ],
+      "content": "Fictional budget draft.\n\nThe draft contains a bell character \u0007 here."
+    }
+  ]
+}

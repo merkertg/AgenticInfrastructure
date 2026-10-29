@@ -348,3 +348,117 @@ agent_run_citations = Table(
         "start_offset >= 0 AND end_offset > start_offset", name="valid_span"
     ),
 )
+
+sources = Table(
+    "sources",
+    metadata,
+    Column("company_id", String(128), ForeignKey("companies.id"), primary_key=True),
+    Column("id", String(64), primary_key=True),
+    Column("project_id", String(128), nullable=False),
+    Column("kind", String(32), nullable=False),
+    Column("base_url", String(256), nullable=False),
+    Column("space", String(64), nullable=False),
+    Column("document_prefix", String(32), nullable=False),
+    Column("max_age_seconds", Integer, nullable=False),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    # Start of the last applied complete snapshot; NULL until the first one.
+    Column("confirmed_at", DateTime(timezone=True), nullable=True),
+    ForeignKeyConstraint(
+        ["company_id", "project_id"], ["projects.company_id", "projects.id"]
+    ),
+    UniqueConstraint("company_id", "id", "project_id", name="uq_sources_scope"),
+    UniqueConstraint("company_id", "document_prefix", name="uq_sources_prefix"),
+    CheckConstraint("kind = 'handbook-http-v1'", name="supported_kind"),
+    CheckConstraint("max_age_seconds BETWEEN 60 AND 86400", name="max_age_range"),
+)
+
+source_accounts = Table(
+    "source_accounts",
+    metadata,
+    Column("company_id", String(128), primary_key=True),
+    Column("source_id", String(64), primary_key=True),
+    Column("principal", String(128), primary_key=True),
+    Column("employee_id", String(128), nullable=False),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    ForeignKeyConstraint(
+        ["company_id", "source_id"], ["sources.company_id", "sources.id"]
+    ),
+    ForeignKeyConstraint(
+        ["company_id", "employee_id"], ["employees.company_id", "employees.id"]
+    ),
+)
+
+source_documents = Table(
+    "source_documents",
+    metadata,
+    Column("company_id", String(128), primary_key=True),
+    Column("source_id", String(64), primary_key=True),
+    Column("external_id", String(64), primary_key=True),
+    Column("project_id", String(128), nullable=False),
+    Column("document_id", String(128), nullable=False),
+    # The last imported revision and the digest of its text.
+    Column("revision", String(64), nullable=True),
+    Column("content_sha256", String(64), nullable=True),
+    Column("state", String(16), nullable=False),
+    Column("withheld_reason", String(32), nullable=True),
+    ForeignKeyConstraint(
+        ["company_id", "source_id", "project_id"],
+        ["sources.company_id", "sources.id", "sources.project_id"],
+    ),
+    ForeignKeyConstraint(
+        ["company_id", "document_id", "project_id"],
+        ["documents.company_id", "documents.id", "documents.project_id"],
+    ),
+    UniqueConstraint("company_id", "document_id", name="uq_source_documents_document"),
+    CheckConstraint(
+        "state IN ('active', 'deleted', 'withheld')", name="supported_state"
+    ),
+    CheckConstraint(
+        "(state = 'withheld') = (withheld_reason IS NOT NULL)",
+        name="consistent_withheld",
+    ),
+    CheckConstraint(
+        "(revision IS NULL) = (content_sha256 IS NULL)", name="consistent_import"
+    ),
+    CheckConstraint(
+        "state <> 'active' OR revision IS NOT NULL", name="active_with_content"
+    ),
+    CheckConstraint("content_sha256 ~ '^[a-f0-9]{64}$'", name="sha256_content"),
+)
+
+source_sync_runs = Table(
+    "source_sync_runs",
+    metadata,
+    Column("run_id", String(36), primary_key=True),
+    Column("company_id", String(128), nullable=False),
+    Column("source_id", String(64), nullable=False),
+    Column("started_at", DateTime(timezone=True), nullable=False),
+    Column("finished_at", DateTime(timezone=True), nullable=False),
+    Column("outcome", String(16), nullable=False),
+    Column("failure", String(32), nullable=True),
+    # Counts only; no document names, text, URLs or credentials.
+    Column("listed", Integer, nullable=False),
+    Column("fetched", Integer, nullable=False),
+    Column("created", Integer, nullable=False),
+    Column("updated", Integer, nullable=False),
+    Column("unchanged", Integer, nullable=False),
+    Column("restored", Integer, nullable=False),
+    Column("deleted", Integer, nullable=False),
+    Column("withheld", Integer, nullable=False),
+    Column("unmapped_readers", Integer, nullable=False),
+    Column("grants_added", Integer, nullable=False),
+    Column("grants_revoked", Integer, nullable=False),
+    ForeignKeyConstraint(
+        ["company_id", "source_id"], ["sources.company_id", "sources.id"]
+    ),
+    CheckConstraint("outcome IN ('succeeded', 'failed')", name="supported_outcome"),
+    CheckConstraint(
+        "(outcome = 'succeeded') = (failure IS NULL)", name="consistent_failure"
+    ),
+    CheckConstraint("finished_at >= started_at", name="ordered_times"),
+    CheckConstraint(
+        "LEAST(listed, fetched, created, updated, unchanged, restored, deleted, "
+        "withheld, unmapped_readers, grants_added, grants_revoked) >= 0",
+        name="non_negative_counts",
+    ),
+)

@@ -66,7 +66,7 @@ a fake search and a fake clock for limits, provider errors, malformed turns and
 invented citations. The [persistence guide](usage.md#postgresql-persistence) describes local setup.
 
 Neither suite establishes production identity integration, semantic retrieval
-quality, corporate source behavior or live LLM behavior: the agent tests use the
+quality, real corporate source behavior or live LLM behavior: the agent tests use the
 offline provider and scripted fakes only. A process reconnection and a real
 database-server restart are different checks; the verification report states
 which was actually performed.
@@ -94,5 +94,25 @@ uv run --locked --group guide python -m scripts.build_guide
 ```
 
 Inspect rendered pages as described in [the guide index](../guide/README.md).
-The PDF prints the Stage 06 checks recorded in `docs/guide/verification.json`;
+The PDF prints the current stage checks recorded in `docs/guide/verification.json`;
 skipped database tests never count as a database verification.
+
+
+## Source synchronization checks
+
+Source/domain and collector tests use fictional JSON and fake clients. The
+Handbook adapter tests use loopback HTTP with a temporary in-memory token; no
+external service or developer `.env` is needed. PostgreSQL tests cover complete
+sync, replay, content changes, deletion/restoration, mapped read grants,
+read-only writes, unavailable/expired sources, source filtering before ranking,
+final answer checks, rollback on history failure, schema constraints and
+competing snapshots. Run the full suites above; targeted checks are:
+
+```bash
+uv run --locked pytest tests/domain/test_source.py tests/test_source_sync.py tests/test_handbook_client.py tests/test_source_cli.py
+uv run --locked pytest tests/persistence/test_sources.py
+```
+
+The second command needs the explicit validated `TEST_DATABASE_URL`. A successful
+loopback test proves the fictional HTTP contract only; it does not prove real
+corporate credentials, ACL interpretation or production connectivity.

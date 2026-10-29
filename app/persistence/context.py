@@ -23,6 +23,7 @@ from app.domain.models import (
 )
 from app.domain.policy import evaluate_access
 from app.persistence import schema as db
+from app.persistence.sources import lacks_confirmation, source_denials
 
 MAX_SEARCH_DOCUMENTS = 200
 
@@ -39,12 +40,16 @@ class ScopeSnapshot:
 
 
 def authorized_versions(
-    connection: Connection, request: ScopeRequest, scope: ScopeSnapshot
+    connection: Connection,
+    request: ScopeRequest,
+    scope: ScopeSnapshot,
+    occurred_at: datetime,
 ) -> tuple[tuple[DocumentVersion, ...], bool]:
     """Return the latest active version of each readable document, capped by ID order.
 
-    SQL narrows candidates to documents with an active read grant so other text
-    is never loaded; evaluate_access() still decides each candidate.
+    SQL narrows candidates to documents with an active read grant and, for synced
+    documents, a confirmed source, so other text is never loaded;
+    evaluate_access() and source_denials() still decide each candidate.
     """
     readable = exists().where(
         db.grants.c.company_id == db.documents.c.company_id,
@@ -62,6 +67,7 @@ def authorized_versions(
                 db.documents.c.project_id == request.project_id,
                 db.documents.c.active.is_(True),
                 readable,
+                ~lacks_confirmation(occurred_at),
             )
             .order_by(db.documents.c.id)
             .limit(MAX_SEARCH_DOCUMENTS + 1)
@@ -132,7 +138,17 @@ def authorized_versions(
         )
         if decision.allowed:
             allowed.append(version)
-    return tuple(allowed), truncated
+    denied = source_denials(
+        connection,
+        request.company_id,
+        {version.document_id for version in allowed},
+        Action.READ,
+        occurred_at,
+    )
+    return (
+        tuple(version for version in allowed if version.document_id not in denied),
+        truncated,
+    )
 
 
 def record_context(

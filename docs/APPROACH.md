@@ -10,8 +10,8 @@ finance employee's assistant can retrieve authorized finance context; an
 engineering employee's assistant can retrieve authorized engineering context.
 Neither gains access merely by knowing a document, employee or project ID.
 
-The eventual context response will contain bounded excerpts and source references
-to specific document versions. It will state when no authorized evidence exists.
+The context response contains bounded excerpts and source references to
+specific document versions. It states when no authorized evidence exists.
 Agents share the service while retaining the access boundaries of the employees
 who delegated to them. Agent discovery and task exchange are outside this build.
 
@@ -141,6 +141,30 @@ not returned. Losing access to a cited version withholds the whole answer. The
 first provider is deterministic and offline. See
 [ADR 0006](adr/0006-bounded-agent-context-tool.md).
 
+Stage 07 synchronizes one configured Handbook HTTP source:
+
+```text
+trusted setup: fixed host + space + project + source-user/employee mapping
+        ↓
+GET complete listing and changed texts (outside a database transaction)
+        ↓
+company lock → reread settings, state and account mapping → pure sync plan
+        ↓
+versions + active documents + read-only grants + confirmation + run history
+        ↓ (one commit)
+memory reads/search/answer checks also require fresh source confirmation
+```
+
+The adapter never follows redirects, uses proxies or accepts a payload URL.
+Only mapped individual users receive read grants. Deleted or rejected documents
+lose all active grants; a replay creates no duplicate version. A failed fetch
+applies nothing and does not extend the confirmation window. Confirmation is
+measured from the successful run's start, and expired or disabled sources are
+excluded before text loading and ranking and checked again before responses.
+The source token is supplied at run time and never persisted. This is a tested
+contract with a fictional lab, not evidence of a real corporate integration.
+See [ADR 0007](adr/0007-read-only-source-sync.md).
+
 ## Architecture and remaining stages
 
 Grow a modular monolith as working behavior appears:
@@ -153,7 +177,7 @@ Grow a modular monolith as working behavior appears:
 | Identity and API | Implemented agent bearer credentials and scoped memory version routes | 04 |
 | Retrieval | Implemented bounded intake, permission-filtered search and context provenance | 05 |
 | Agent tool | Implemented one scoped search tool, citation checks and an offline provider | 06 |
-| Corporate adapter | One read-only source, permission synchronization and revocation | 07 |
+| Source adapter | Implemented read-only Handbook HTTP adapter, sync and freshness gates | 07 |
 | Delivery | Containers, integration evaluations and operating instructions | 08 |
 
 Domain code uses ordinary Python types without FastAPI, database or model SDK
@@ -220,9 +244,9 @@ company/project scope, operation, target/version references, outcome, reason cod
 server timestamp and request identifier. Audit rows contain the metadata needed
 to explain an action without copying tokens, digests or document text.
 
-These transaction guarantees currently apply to trusted version reads and
-appends. Future context retrieval must preserve them. Denied attempts and
-authorized context-read attempts also need durable history.
+These transaction guarantees apply to version reads/appends, context retrieval,
+agent completion and source snapshot application. Denied attempts and
+authorized context-read attempts require durable history.
 A read record does not prove that the client received the response. If required
 audit recording is unavailable, business data must not be returned and mutations
 must fail closed; that outage may also prevent a durable denial record. The
@@ -232,32 +256,36 @@ deployment recovery procedures belong to the delivery stage.
 Application audit records alone do not prove tamper resistance against database
 administrators; stronger retention and operational controls need separate work.
 
-Each returned excerpt will retain source identity, document version and location.
-No source will be invented when retrieval finds no authorized evidence. Changes
-to source content or grants must not silently alter an old recorded reference.
+Each returned excerpt retains source identity, document version and location.
+No source is invented when retrieval finds no authorized evidence. New source
+text creates a version; old references retain their original text but require
+current access and source confirmation before they can be read.
 
 ## Agent and connector limits
 
-The planned agent receives a context-reading tool with validated arguments,
+The agent receives a context-reading tool with validated arguments,
 server-enforced scope, timeouts and budgets for calls and output size. Document
 text is untrusted data, including text that asks the model to change permissions,
 reveal another project or call a corporate service. The model cannot authorize an
 operation or bypass the application layer. Initial evaluations use an offline
 deterministic provider; a live model result is reported separately.
 
-The first corporate integration will read one allowlisted source with restricted
-credentials. It must propagate source deletions and revoked rights before its
-content is made available. Sync failures must remain visible and cannot silently
-preserve access that the service can no longer establish. Arbitrary URLs,
-unrestricted service calls and corporate writes are outside the initial connector.
+The Handbook adapter reads one trusted registered address and space using a
+runtime bearer token. Source deletions and reader revocations apply at the next
+complete successful sync. Until then, the previous snapshot can remain readable
+within its configured freshness window; failures never extend that window. This
+is a bounded delay, not instantaneous source revocation. Operators can inspect
+confirmation and run status. Arbitrary URLs, unrestricted service calls and
+corporate writes are outside the connector; actual corporate credentials and
+service behavior have not been validated.
 
 ## Acceptance targets and limits
 
 Current domain and persistence checks use fictional fixtures for permission
 boundaries, version conflicts, request replay and unavailable audit storage.
 Stage 04 adds authenticated HTTP requests with invalid, revoked and spoofed
-identity. Later stages must extend them to source sync, retrieval and stale
-cache/index entries. Expected results must be independent of the
+identity. Stages 05–07 extend them to retrieval, agent answers and source sync. No
+persisted search index or result cache exists. Expected results must be independent of the
 implementation. A database check is reported as verified only after an actual
 PostgreSQL run, separately from the unit suite.
 

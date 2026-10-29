@@ -35,6 +35,9 @@ class ReasonCode(StrEnum):
     EMPLOYEE_PERMISSION_MISSING = "employee_permission_missing"
     # Set by the persistence adapter when the authenticated credential lapsed.
     CREDENTIAL_UNAVAILABLE = "credential_unavailable"
+    # Set by the persistence adapter for documents mirrored from a source.
+    SOURCE_UNCONFIRMED = "source_unconfirmed"
+    SOURCE_READ_ONLY = "source_read_only"
 
 
 def _validate_id(value: str, name: str) -> None:
