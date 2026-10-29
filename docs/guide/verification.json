@@ -6,8 +6,9 @@
   "revision": {
     "branch": "main",
     "base_commit": "01e01b0063d3d0327893a0021d8fac17d474a37a",
-    "state": "locally_verified_uncommitted",
-    "note": "No commit or push in this continuation; previous publication records are historical and were not revalidated."
+    "code_commit": "5f5bc7556da0e7a039be7fa9366700d5f22c7d89",
+    "state": "published_code_commit",
+    "note": "Local checks ran on the working tree that became the stage 07 commit; its remote ref and CI were verified separately after publication."
   },
   "runtime": {
     "python": "3.12.15",
@@ -192,7 +193,8 @@
       "pages": 15,
       "text_extraction": "passed with pdftotext -layout; stage07, test counts and publication status present",
       "visual_review": "All 15 pages rendered at 1400 px and inspected. Final wording and limitations changed only pages 10 and 15; both re-rendered and inspected; other 13 pages pixel-compared unchanged. No clipping or overlap observed.",
-      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide"
+      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide",
+      "rebuilt_after_publication": "Rebuilt with stage 07 CI data on 2026-10-29: only page 13 changed after rasterization; it was rendered at 1400 px and inspected, the other 14 pages were byte-identical."
     }
   },
   "publication": {
@@ -316,11 +318,20 @@
       }
     },
     "stage_07": {
-      "status": "locally_verified_uncommitted",
-      "commit": null,
+      "status": "published",
+      "commit": "5f5bc7556da0e7a039be7fa9366700d5f22c7d89",
       "branch": "main",
-      "remote_ref": "not_published",
-      "github_actions": "not_verified"
+      "remote_ref": "verified",
+      "verified_on": "2026-10-29",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40814551812,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40814551812",
+        "all_steps": "success",
+        "postgres_step": "success",
+        "test_counts_in_ci_log": "not_verified"
+      }
     }
   },
   "previous_stages": {
@@ -1454,5 +1465,5 @@
     "Database owners can modify documents, grants, credentials and history directly.",
     "The temporary native PostgreSQL lab is not a deployed service."
   ],
-  "guide_note": "Проверка этапа 07 29.10.2026: 591 passed (451 без PostgreSQL, 140 PostgreSQL); strict mypy 88 файлов, Ruff, alembic check, ссылки и сквозной сетевой сценарий. Источник Handbook вымышленный; корпоративный сервис и настоящая модель не подключались. Этап 07 локальный, без commit/push; CI — not_verified. Прежние публикации ниже исторические."
+  "guide_note": "Проверка этапа 07 29.10.2026: 591 passed (451 без PostgreSQL, 140 PostgreSQL); strict mypy 88 файлов, Ruff, alembic check, ссылки и сквозной сетевой сценарий. Источник Handbook вымышленный; корпоративный сервис и настоящая модель не подключались. Commit этапа 5f5bc75 опубликован в main; CI 40814551812 — success."
 }
