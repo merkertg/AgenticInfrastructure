@@ -273,3 +273,78 @@ context_items = Table(
         "start_offset >= 0 AND end_offset > start_offset", name="valid_span"
     ),
 )
+
+agent_runs = Table(
+    "agent_runs",
+    metadata,
+    Column("run_id", String(128), primary_key=True),
+    Column("company_id", String(128), nullable=False),
+    Column("project_id", String(128), nullable=False),
+    Column("employee_id", String(128), nullable=False),
+    Column("agent_id", String(128), nullable=False),
+    Column("credential_id", String(128), nullable=True),
+    # Neither the question nor the answer is stored; the digest allows correlation.
+    Column("question_sha256", String(64), nullable=False),
+    Column("provider", String(64), nullable=False),
+    Column("allowed", Boolean, nullable=False),
+    Column("reason", String(64), nullable=False),
+    Column("outcome", String(32), nullable=False),
+    Column("steps", Integer, nullable=False),
+    Column("tool_calls", Integer, nullable=False),
+    Column("cited_items", Integer, nullable=False),
+    Column("occurred_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint("allowed = (reason = 'allowed')", name="consistent_authorization"),
+    CheckConstraint(
+        "outcome IN ('answered', 'unanswered', 'denied', 'evidence_revoked', "
+        "'provider_error', 'invalid_turn', 'invalid_answer', 'invalid_citation', "
+        "'tool_call_limit', 'step_limit', 'time_limit', 'transcript_limit')",
+        name="supported_outcome",
+    ),
+    CheckConstraint(
+        "allowed = (outcome NOT IN ('denied', 'evidence_revoked'))",
+        name="consistent_outcome",
+    ),
+    CheckConstraint(
+        "(outcome = 'answered') = (cited_items > 0)", name="answered_with_citations"
+    ),
+    CheckConstraint("question_sha256 ~ '^[a-f0-9]{64}$'", name="sha256_question"),
+    CheckConstraint("steps BETWEEN 0 AND 8", name="steps_range"),
+    CheckConstraint("tool_calls BETWEEN 0 AND 10", name="tool_calls_range"),
+    CheckConstraint("cited_items BETWEEN 0 AND 10", name="cited_items_range"),
+)
+
+agent_run_searches = Table(
+    "agent_run_searches",
+    metadata,
+    Column("run_id", String(128), ForeignKey("agent_runs.run_id"), primary_key=True),
+    Column("position", Integer, primary_key=True),
+    Column(
+        "context_request_id",
+        String(128),
+        ForeignKey("context_requests.request_id"),
+        nullable=False,
+        unique=True,
+    ),
+    CheckConstraint("position BETWEEN 1 AND 10", name="position_range"),
+)
+
+agent_run_citations = Table(
+    "agent_run_citations",
+    metadata,
+    Column("run_id", String(128), ForeignKey("agent_runs.run_id"), primary_key=True),
+    Column("position", Integer, primary_key=True),
+    Column("company_id", String(128), nullable=False),
+    Column("document_id", String(128), nullable=False),
+    Column("version_id", String(128), nullable=False),
+    Column("fragment_ordinal", Integer, nullable=False),
+    Column("start_offset", Integer, nullable=False),
+    Column("end_offset", Integer, nullable=False),
+    ForeignKeyConstraint(
+        ["company_id", "document_id", "version_id"],
+        ["versions.company_id", "versions.document_id", "versions.id"],
+    ),
+    CheckConstraint("position BETWEEN 1 AND 10", name="position_range"),
+    CheckConstraint(
+        "start_offset >= 0 AND end_offset > start_offset", name="valid_span"
+    ),
+)

@@ -39,7 +39,7 @@ class GuideFacts:
     publications: tuple[Publication, ...]
     not_implemented: tuple[str, ...]
     limitations: tuple[str, ...]
-    documentation_note: str
+    guide_note: str
 
 
 def _get(data: dict[str, Any], *keys: str) -> Any:
@@ -109,9 +109,9 @@ def load_facts(path: Path) -> GuideFacts:
         ):
             raise GuideDataError(f"{key} must be a list of strings")
         lists[key] = tuple(values)
-    documentation = data.get("documentation_update", {})
-    if not isinstance(documentation, dict):
-        raise GuideDataError("documentation_update must be an object")
+    note = data.get("guide_note", "")
+    if not isinstance(note, str):
+        raise GuideDataError("guide_note must be a string")
     return GuideFacts(
         stage=int(stage),
         checked_at=str(_get(data, "checked_at")),
@@ -133,7 +133,5 @@ def load_facts(path: Path) -> GuideFacts:
         ),
         not_implemented=lists["not_implemented"],
         limitations=lists["limitations"],
-        documentation_note=str(
-            data.get("documentation_update", {}).get("guide_note", "")
-        ),
+        guide_note=note,
     )

@@ -11,7 +11,10 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import __version__
+from app.api.answers import router as answers_router
 from app.api.memory import MemoryServices, router, storage_unavailable
+from app.application.agent import ModelProvider
+from app.application.offline_model import OfflineProvider
 from app.config import Settings, get_settings
 from app.persistence.credentials import CredentialAuthenticator
 from app.persistence.database import make_engine
@@ -37,6 +40,7 @@ def create_app(
     *,
     engine: Engine | None = None,
     clock: Callable[[], datetime] = utc_now,
+    provider: ModelProvider | None = None,
 ) -> FastAPI:
     """Build an independent application, allowing explicit settings in tests."""
     resolved_settings = settings if settings is not None else get_settings()
@@ -63,7 +67,7 @@ def create_app(
         debug=resolved_settings.app_debug,
         description=(
             "Staged learning project for shared corporate memory for AI agents. "
-            "Stage 04 adds authenticated memory version reads and appends."
+            "Stage 06 adds a bounded agent answer over one scoped memory tool."
         ),
         lifespan=lifespan,
     )
@@ -73,12 +77,14 @@ def create_app(
             store=MemoryStore(engine),
             authenticator=CredentialAuthenticator(engine),
             clock=clock,
+            provider=provider if provider is not None else OfflineProvider(),
         )
         if engine is not None
         else None
     )
     application.add_exception_handler(SQLAlchemyError, storage_unavailable)
     application.include_router(router)
+    application.include_router(answers_router)
 
     @application.get("/health", response_model=HealthResponse, tags=["health"])
     def health() -> HealthResponse:

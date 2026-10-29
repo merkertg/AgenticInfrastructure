@@ -2,9 +2,9 @@
 
 import hashlib
 import json
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
@@ -12,6 +12,7 @@ from uuid import uuid4
 from sqlalchemy import Connection, Engine, Table, func, insert, select
 from sqlalchemy.engine import RowMapping
 
+from app.application.agent import AgentRun, RunOutcome
 from app.application.context import ContextItem, ContextOutcome, ContextResult
 from app.application.memory import MemoryOutcome, MemoryResult
 from app.domain.audit import make_audit_event
@@ -39,9 +40,11 @@ from app.domain.retrieval import (
     select_context,
 )
 from app.domain.text import split_fragments
+from app.domain.tool import check_question
 from app.persistence import schema as db
 from app.persistence.context import ScopeSnapshot, authorized_versions, record_context
 from app.persistence.credentials import credential_is_current
+from app.persistence.runs import record_run
 
 
 def _row(
@@ -77,6 +80,22 @@ def _check_call(
         raise TypeError("request must be an AccessRequest")
     if request.action is not action:
         raise ValueError("request action does not match the operation")
+    if not isinstance(occurred_at, datetime):
+        raise TypeError("occurred_at must be a datetime")
+    if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+        raise ValueError("occurred_at must be timezone-aware")
+    if credential_id is not None and not isinstance(credential_id, str):
+        raise TypeError("credential_id must be a string or None")
+
+
+def _check_scope_call(
+    request: ScopeRequest, occurred_at: datetime, credential_id: str | None
+) -> None:
+    """Reject malformed project-wide calls before opening a database transaction."""
+    if not isinstance(request, ScopeRequest):
+        raise TypeError("request must be a ScopeRequest")
+    if request.action is not Action.READ:
+        raise ValueError("project-wide operations require the read action")
     if not isinstance(occurred_at, datetime):
         raise TypeError("occurred_at must be a datetime")
     if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
@@ -434,19 +453,18 @@ class MemoryStore:
             delegation=delegation,
         )
 
-    def _still_readable(
+    def _version_reasons(
         self,
         connection: Connection,
         request: ScopeRequest,
-        selected: tuple[RankedFragment, ...],
+        targets: Iterable[tuple[str, str]],
         credential_id: str | None,
         occurred_at: datetime,
-    ) -> tuple[RankedFragment, ...]:
-        """Reevaluate each selected version with fresh reads and drop lost access."""
-        verdicts: dict[str, bool] = {}
-        for entry in selected:
-            version_id = entry.candidate.version_id
-            if version_id not in verdicts:
+    ) -> dict[str, ReasonCode]:
+        """Reevaluate each distinct (document, version) pair with fresh reads."""
+        reasons: dict[str, ReasonCode] = {}
+        for document_id, version_id in targets:
+            if version_id not in reasons:
                 decision, _ = self._decision(
                     connection,
                     AccessRequest(
@@ -455,16 +473,39 @@ class MemoryStore:
                         project_id=request.project_id,
                         employee_id=request.employee_id,
                         agent_id=request.agent_id,
-                        document_id=entry.candidate.document_id,
+                        document_id=document_id,
                         version_id=version_id,
                         action=Action.READ,
                     ),
                     credential_id,
                     occurred_at,
                 )
-                verdicts[version_id] = decision.allowed
+                reasons[version_id] = decision.reason
+        return reasons
+
+    def _still_readable(
+        self,
+        connection: Connection,
+        request: ScopeRequest,
+        selected: tuple[RankedFragment, ...],
+        credential_id: str | None,
+        occurred_at: datetime,
+    ) -> tuple[RankedFragment, ...]:
+        """Drop selected fragments whose version lost access since ranking."""
+        reasons = self._version_reasons(
+            connection,
+            request,
+            (
+                (entry.candidate.document_id, entry.candidate.version_id)
+                for entry in selected
+            ),
+            credential_id,
+            occurred_at,
+        )
         return tuple(
-            entry for entry in selected if verdicts[entry.candidate.version_id]
+            entry
+            for entry in selected
+            if reasons[entry.candidate.version_id] is ReasonCode.ALLOWED
         )
 
     def search_context(
@@ -477,16 +518,7 @@ class MemoryStore:
         credential_id: str | None = None,
     ) -> ContextResult:
         """Filter documents by current rights, then rank, recheck, audit and commit."""
-        if not isinstance(request, ScopeRequest):
-            raise TypeError("request must be a ScopeRequest")
-        if request.action is not Action.READ:
-            raise ValueError("context search requires the read action")
-        if not isinstance(occurred_at, datetime):
-            raise TypeError("occurred_at must be a datetime")
-        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
-            raise ValueError("occurred_at must be timezone-aware")
-        if credential_id is not None and not isinstance(credential_id, str):
-            raise TypeError("credential_id must be a string or None")
+        _check_scope_call(request, occurred_at, credential_id)
         terms = query_terms(query)
         if type(max_items) is not int or not 1 <= max_items <= 10:
             raise ValueError("max_items must be an integer from 1 to 10")
@@ -547,3 +579,83 @@ class MemoryStore:
                 credential_id=credential_id,
             )
         return result
+
+    def check_scope(
+        self,
+        request: ScopeRequest,
+        *,
+        occurred_at: datetime,
+        credential_id: str | None = None,
+    ) -> ReasonCode:
+        """Tell whether a project-wide read may start; finish_run audits the outcome."""
+        _check_scope_call(request, occurred_at, credential_id)
+        with self._transaction() as connection:
+            reason, _ = self._scope_decision(
+                connection, request, credential_id, occurred_at
+            )
+        return reason
+
+    def finish_run(
+        self,
+        request: ScopeRequest,
+        run: AgentRun,
+        *,
+        question: str,
+        occurred_at: datetime,
+        credential_id: str | None = None,
+    ) -> AgentRun:
+        """Recheck scope and every cited version, then record the run and commit.
+
+        The answer is derived from the cited passages, so it is withheld when the
+        scope or any cited version is no longer readable.
+        """
+        _check_scope_call(request, occurred_at, credential_id)
+        if not isinstance(run, AgentRun):
+            raise TypeError("run must be an AgentRun")
+        check_question(question)
+        with self._transaction() as connection:
+            reason, _ = self._scope_decision(
+                connection, request, credential_id, occurred_at
+            )
+            final = run
+            if reason is not ReasonCode.ALLOWED:
+                final = replace(
+                    run,
+                    outcome=RunOutcome.DENIED,
+                    reason=reason,
+                    answer=None,
+                    citations=(),
+                )
+            elif run.outcome is RunOutcome.ANSWERED:
+                reasons = self._version_reasons(
+                    connection,
+                    request,
+                    ((item.document_id, item.version_id) for item in run.citations),
+                    credential_id,
+                    occurred_at,
+                )
+                lost = next(
+                    (
+                        value
+                        for value in reasons.values()
+                        if value is not ReasonCode.ALLOWED
+                    ),
+                    None,
+                )
+                if lost is not None:
+                    final = replace(
+                        run,
+                        outcome=RunOutcome.EVIDENCE_REVOKED,
+                        reason=lost,
+                        answer=None,
+                        citations=(),
+                    )
+            record_run(
+                connection,
+                request,
+                final,
+                question=question,
+                occurred_at=occurred_at,
+                credential_id=credential_id,
+            )
+        return final

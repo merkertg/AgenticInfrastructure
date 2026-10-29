@@ -52,8 +52,9 @@ another local port. Neither issue is evidence that the health handler is wrong.
 
 Create an isolated local PostgreSQL database, then follow
 [the persistence setup](usage.md#postgresql-persistence),
-[issue fictional agent credentials](usage.md#authenticated-memory-api), and
-[import and search documents](usage.md#document-intake-and-context-search).
+[issue fictional agent credentials](usage.md#authenticated-memory-api),
+[import and search documents](usage.md#document-intake-and-context-search) and
+[ask the offline agent](usage.md#agent-answers).
 The [Stage 03 guide](../STAGE_03.md) includes native PostgreSQL setup.
 Use separate databases ending in `_lab` for the lab and `_test` for tests.
 

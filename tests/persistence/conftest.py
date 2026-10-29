@@ -61,7 +61,8 @@ def engine(pg_engine: Engine) -> Iterator[Engine]:
     with pg_engine.begin() as connection:
         connection.execute(
             text(
-                "TRUNCATE context_items, context_requests, write_requests, "
+                "TRUNCATE agent_run_citations, agent_run_searches, agent_runs, "
+                "context_items, context_requests, write_requests, "
                 "audit_events, grants, versions, documents, "
                 "delegations, agent_credentials, agents, employees, projects, "
                 "companies CASCADE"

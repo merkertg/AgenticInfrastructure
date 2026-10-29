@@ -25,6 +25,7 @@ def test_current_verification_data_is_valid() -> None:
         (("checks", "pytest", "postgres", "passed"), -1),
         (("stage",), "five"),
         (("limitations",), "not a list"),
+        (("guide_note",), 5),
     ],
 )
 def test_inconsistent_data_is_rejected(

@@ -25,9 +25,13 @@ EXPECTED_TABLES = {
     "write_requests",
     "context_requests",
     "context_items",
+    "agent_runs",
+    "agent_run_searches",
+    "agent_run_citations",
     "alembic_version",
 }
 CONTEXT_TABLES = {"context_requests", "context_items"}
+RUN_TABLES = {"agent_runs", "agent_run_searches", "agent_run_citations"}
 
 
 def test_migration_creates_expected_tables(engine: Engine) -> None:
@@ -75,6 +79,7 @@ def test_credential_revision_downgrades_to_initial_schema(
         assert set(inspector.get_table_names()) == EXPECTED_TABLES - {
             "agent_credentials",
             *CONTEXT_TABLES,
+            *RUN_TABLES,
         }
         audit_columns = {
             column["name"] for column in inspector.get_columns("audit_events")
@@ -84,7 +89,7 @@ def test_credential_revision_downgrades_to_initial_schema(
         migrate(postgres_url)
     with engine.connect() as connection:
         revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
-    assert revision == "0003_context_history"
+    assert revision == "0004_agent_runs"
     audit_columns = {
         column["name"] for column in inspect(engine).get_columns("audit_events")
     }
@@ -102,8 +107,24 @@ def test_context_revision_downgrades_to_credential_schema(
             configuration.attributes["connection"] = connection
             command.downgrade(configuration, "0002_agent_credentials")
         assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES - (
-            CONTEXT_TABLES
+            CONTEXT_TABLES | RUN_TABLES
         )
+    finally:
+        migrate(postgres_url)
+    assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES
+
+
+def test_run_revision_downgrades_to_context_schema(
+    engine: Engine, postgres_url: str
+) -> None:
+    """Reverting Stage 06 removes only the agent run history tables."""
+    configuration = Config(str(ROOT / "alembic.ini"))
+    configuration.set_main_option("script_location", str(ROOT / "migrations"))
+    try:
+        with engine.begin() as connection:
+            configuration.attributes["connection"] = connection
+            command.downgrade(configuration, "0003_context_history")
+        assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES - RUN_TABLES
     finally:
         migrate(postgres_url)
     assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES

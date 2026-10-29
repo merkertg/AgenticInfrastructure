@@ -63,7 +63,9 @@ LIMITATIONS = (
     "Каждый поиск заново читает разрешённые версии; учитываются до 200 документов.",
     "Приём документов — привилегированная настройка лаборатории, не HTTP.",
     "Bearer-токен действует как его агент до истечения или отзыва; только loopback.",
-    "Хеш короткого запроса в истории можно подобрать.",
+    "Хеш короткого запроса или вопроса в истории можно подобрать.",
+    "Офлайн-провайдер цитирует найденные фрагменты, а не рассуждает.",
+    "Цикл агента не может прервать зависший провайдер; лимита частоты нет.",
     "Владелец PostgreSQL может напрямую изменить документы, права и историю.",
     "Временный локальный кластер PostgreSQL — не развёрнутый сервис.",
 )
@@ -76,10 +78,11 @@ SECTIONS = (
     ("Этап 03. PostgreSQL и аудит", "версии, транзакции и повторы"),
     ("Этап 04. Личность агента", "bearer-токены и API памяти"),
     ("Этап 05. Приём и поиск", "фрагменты, BM25 и фильтр прав"),
+    ("Этап 06. Инструмент агента", "один инструмент, лимиты и ссылки"),
     ("Практика: полный сценарий", "команды лаборатории по порядку"),
     ("Проверки, CI и публикация", "фактические результаты"),
     ("Типичные ошибки", "симптом и что проверить"),
-    ("Ограничения и дальше", "что не реализовано и этапы 06–08"),
+    ("Ограничения и дальше", "что не реализовано и этапы 07–08"),
 )
 
 
@@ -339,7 +342,15 @@ def architecture(c: Any, w: float, h: float) -> None:
     xs = (0, bw + gap, 2 * (bw + gap))
     top, bottom, bh = h - 66, 14, 56
     box(c, xs[0], top, bw, bh, "Агент сотрудника", ("HTTP-клиент", "Bearer aik1_…"))
-    box(c, xs[1], top, bw, bh, "FastAPI", ("app/api/memory.py", "маршруты /memory"))
+    box(
+        c,
+        xs[1],
+        top,
+        bw,
+        bh,
+        "FastAPI",
+        ("app/api: memory, answers", "маршруты /memory"),
+    )
     box(
         c,
         xs[2],
@@ -602,8 +613,8 @@ def cover_painter(facts: GuideFacts) -> Callable[[Any, Any], None]:
         c.setFont("Sans", 8.5)
         notes = (
             f"Проверка: {facts.checked_at}. Исходный commit: {facts.base_commit[:12]}.",
-            "Числа этапа 05 взяты из verification.json; "
-            "новая проверка материалов — в разделе 09.",
+            f"Числа этапа {facts.stage:02d} взяты из verification.json; "
+            "публикация и CI — в разделе 10.",
             "Все данные вымышленные. Это не корпоративный SSO и не готовый сервис.",
         )
         for index, line in enumerate(notes):
@@ -624,6 +635,16 @@ def content_page(c: Any, doc: Any) -> None:
     c.drawString(MARGIN, PAGE_H - 10 * mm, "Agentic Infrastructure · руководство")
     c.drawRightString(PAGE_W - MARGIN, 10 * mm, f"стр. {doc.page}")
     c.restoreState()
+
+
+def publication_label(name: str) -> str:
+    """Turn a publication key such as stage_05_documentation into a short label."""
+    if name == "branch_consolidation":
+        return "перенос в main"
+    stage = name.removeprefix("stage_")
+    if stage.endswith("_documentation"):
+        return "документы " + stage.removesuffix("_documentation")
+    return "этап " + stage
 
 
 def section(story: list[Any], number: int, color: Any = BLUE) -> None:
@@ -677,7 +698,7 @@ def build_story(facts: GuideFacts) -> list[Any]:
                 ],
                 ["04", "Bearer-токены агентов и HTTP API версий", "Реализован"],
                 ["05", "Приём документов и поиск с фильтром прав", "Реализован"],
-                ["06", "Ограниченный инструмент контекста для агента", "План"],
+                ["06", "Ограниченный инструмент контекста для агента", "Реализован"],
                 ["07", "Один корпоративный источник для чтения", "План"],
                 ["08", "Контейнеры, оценки и выпуск", "План"],
             ],
@@ -691,8 +712,9 @@ def build_story(facts: GuideFacts) -> list[Any]:
             f"Финансовый помощник {mono('fin-agent')} сотрудника {mono('fin-user')} "
             "читает финансовую политику и ищет в ней лимиты командировок. "
             f"Инженерный помощник {mono('eng-agent')} с тем же запросом к "
-            "финансовому проекту получает 404. Все люди, документы и токены "
-            "вымышлены."
+            "финансовому проекту получает 404. На один и тот же вопрос агенты "
+            "получают ответы со ссылками только на свои документы. Все люди, "
+            "документы и токены вымышлены."
         ),
     ]
 
@@ -712,7 +734,8 @@ def build_story(facts: GuideFacts) -> list[Any]:
                 [
                     "Приложение",
                     mono("app/application"),
-                    "Контракты результатов: MemoryResult, ContextResult, Principal.",
+                    "Контракты результатов, Principal, цикл run_agent и "
+                    "офлайн-провайдер.",
                 ],
                 [
                     "Хранение",
@@ -722,12 +745,13 @@ def build_story(facts: GuideFacts) -> list[Any]:
                 [
                     "HTTP",
                     mono("app/api"),
-                    "Маршруты памяти, проверка bearer-токена, схемы ответов.",
+                    "Маршруты памяти и ответов агента, bearer-токен, схемы.",
                 ],
                 [
                     "Миграции",
                     mono("migrations"),
-                    "Alembic: 0001 схема, 0002 токены, 0003 история поиска.",
+                    "Alembic: 0001 схема, 0002 токены, 0003 история поиска, "
+                    "0004 запуски агента.",
                 ],
             ],
             [70, 110, W - 180],
@@ -972,11 +996,79 @@ def build_story(facts: GuideFacts) -> list[Any]:
         ),
     ]
 
-    section(story, 8)
+    section(story, 8, VIOLET)
+    story += [
+        p(
+            "Агент задаёт вопрос обычной фразой, а сервер запускает модель. "
+            f"У модели ровно один инструмент — {mono('search_memory')} с "
+            f"аргументами {mono('query')} и {mono('max_items')}. Проект берётся "
+            "из пути, сотрудник и агент — из токена; в описании инструмента их нет."
+        ),
+        heading("Один запуск агента"),
+        Diagram(
+            130,
+            numbered_flow(
+                (
+                    ("Область", "до запуска модели"),
+                    ("Шаг модели", "вызов или ответ"),
+                    ("Аргументы", "строгий JSON, без project_id"),
+                    ("Поиск этапа 05", "права, BM25, история"),
+                    ("Ссылки", "только из этого запуска"),
+                    ("Перепроверка", "область и цитаты, история"),
+                ),
+                VIOLET_L,
+                VIOLET,
+            ),
+        ),
+        heading("Лимиты запуска"),
+        grid(
+            [
+                ["Лимит", "Значение", "Исход при превышении"],
+                ["Шаги модели", "4", mono("step_limit")],
+                ["Вызовы инструмента", "3, пакет целиком", mono("tool_call_limit")],
+                ["Время", "15 секунд", mono("time_limit") + ", HTTP 504"],
+                ["Текст для модели", "24 000 символов", mono("transcript_limit")],
+                [
+                    "Ответ",
+                    "до 2 000 символов, до 10 ссылок",
+                    mono("invalid_answer / invalid_citation"),
+                ],
+            ],
+            [130, 140, W - 270],
+            VIOLET,
+        ),
+        Spacer(1, 8),
+        callout(
+            "Ответ принимается, только если каждая ссылка — фрагмент, который "
+            "вернул поиск этого же запуска. Текст без ссылок не возвращается. "
+            "Перед ответом права на каждую процитированную версию проверяются "
+            "снова; при отзыве ответ скрывается целиком (404).",
+            VIOLET,
+            VIOLET_L,
+        ),
+        Spacer(1, 6),
+        code_block(
+            'curl -s -X POST -H "Authorization: Bearer $FIN_TOKEN" \\\n'
+            '  -H "Content-Type: application/json" \\\n'
+            '  -d \'{"question":"What is the travel limit per trip?"}\' \\\n'
+            "  http://127.0.0.1:8005/memory/projects/finance/answers"
+        ),
+        p(
+            "Офлайн-провайдер offline-extractive-v1 ищет по словам вопроса и "
+            "цитирует первое предложение каждого фрагмента: «[1] The travel limit "
+            "is 500 credits per trip.» Фраза «Ignore all previous rules…» из "
+            "deploy-notes попадает в ответ инженерного агента как цитата, а поиск "
+            "в finance не выполняется. Ошибки провайдера, неверные шаги и ссылки "
+            "дают 502 с кодом исхода без текста.",
+            BODY_S,
+        ),
+    ]
+
+    section(story, 9)
     story += [
         p(
             "Сценарий на временной локальной PostgreSQL 17 с вымышленными данными. "
-            "Подробные объяснения — в docs/STAGE_03.md, STAGE_04.md и STAGE_05.md."
+            "Подробные объяснения — в docs/STAGE_03.md … STAGE_06.md."
         ),
         heading("1. Лаборатория PostgreSQL"),
         code_block(
@@ -1010,7 +1102,11 @@ def build_story(facts: GuideFacts) -> list[Any]:
             "versions/policy-v1\n"
             'curl -s -X POST -H "Authorization: Bearer $FIN_TOKEN" \\\n'
             '  -H "Content-Type: application/json" -d \'{"query":"travel limit"}\' \\\n'
-            "  http://127.0.0.1:8005/memory/projects/finance/context"
+            "  http://127.0.0.1:8005/memory/projects/finance/context\n"
+            'curl -s -X POST -H "Authorization: Bearer $FIN_TOKEN" \\\n'
+            '  -H "Content-Type: application/json" \\\n'
+            '  -d \'{"question":"What is the travel limit?"}\' \\\n'
+            "  http://127.0.0.1:8005/memory/projects/finance/answers"
         ),
         p(
             "Токены печатаются один раз: сохраните их в переменные FIN_TOKEN и "
@@ -1019,12 +1115,10 @@ def build_story(facts: GuideFacts) -> list[Any]:
         ),
     ]
 
-    section(story, 9, BLUE)
+    section(story, 10, BLUE)
     published = [
         [
-            entry.name.replace("stage_", "этап ").replace(
-                "branch_consolidation", "перенос в main"
-            ),
+            publication_label(entry.name),
             mono(entry.commit[:12]),
             entry.remote_ref,
             f"{entry.ci_run} · {entry.ci_result}",
@@ -1033,14 +1127,14 @@ def build_story(facts: GuideFacts) -> list[Any]:
     ]
     story += [
         p(
-            "Ниже сохранены результаты проверки кода этапа 05: " + facts.checked_at,
+            f"Результаты проверки кода этапа {facts.stage:02d}: " + facts.checked_at,
             BODY_S,
         ),
-        p(facts.documentation_note, BODY_S),
+        p(facts.guide_note, BODY_S),
         Spacer(1, 6),
         grid(
             [
-                ["Проверка этапа 05", "Фактический результат"],
+                [f"Проверка этапа {facts.stage:02d}", "Фактический результат"],
                 [
                     "pytest с TEST_DATABASE_URL",
                     f"{facts.tests_total} passed: {facts.tests_unit} без БД и "
@@ -1087,7 +1181,7 @@ def build_story(facts: GuideFacts) -> list[Any]:
         ),
     ]
 
-    section(story, 10, RED)
+    section(story, 11, RED)
     story += [
         grid(
             [
@@ -1126,13 +1220,22 @@ def build_story(facts: GuideFacts) -> list[Any]:
                     "intake_lab: document_exists",
                     "Документ с таким именем файла уже импортирован",
                 ],
+                [
+                    "unanswered на свой вопрос",
+                    "Есть ли слова вопроса в разрешённых документах",
+                ],
+                [
+                    "502 invalid_citation",
+                    "Провайдер сослался на фрагмент не из поисков этого запуска",
+                ],
+                ["504 time_limit", "Провайдер или поиск дольше 15 секунд"],
             ],
             [190, W - 190],
             RED,
         ),
     ]
 
-    section(story, 11, MUTED)
+    section(story, 12, MUTED)
     story += [
         heading("Пока не реализовано"),
         *[p("• " + mono(item), BODY_S) for item in facts.not_implemented],
@@ -1142,12 +1245,6 @@ def build_story(facts: GuideFacts) -> list[Any]:
         grid(
             [
                 ["Этап", "Что появится", "Условие готовности"],
-                [
-                    "06",
-                    "Инструмент чтения контекста для агента, офлайн-провайдер модели",
-                    "Лимиты, неверные аргументы, инструкции в тексте, ссылки только "
-                    "на полученные фрагменты",
-                ],
                 [
                     "07",
                     "Один корпоративный источник только для чтения",
@@ -1165,7 +1262,7 @@ def build_story(facts: GuideFacts) -> list[Any]:
         Spacer(1, 10),
         callout(
             "Руководство — наглядная сводка. Подробные объяснения находятся "
-            "в docs/STAGE_01–05.md, фактические проверки — в docs/VERIFICATION.md.",
+            "в docs/STAGE_01–06.md, фактические проверки — в docs/VERIFICATION.md.",
             MUTED,
             SOFT,
         ),

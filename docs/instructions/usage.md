@@ -2,7 +2,7 @@
 
 [← README](../../README.md) · [All documentation](../../README.md#documentation) · [Quickstart](quickstart.md)
 
-The HTTP API exposes liveness and three authenticated memory operations:
+The HTTP API exposes liveness and four authenticated memory operations:
 
 | Method | Path | Result |
 | --- | --- | --- |
@@ -10,6 +10,7 @@ The HTTP API exposes liveness and three authenticated memory operations:
 | GET | `/memory/projects/{project_id}/documents/{document_id}/versions/{version_id}` | Authorized version, bearer credential required |
 | POST | `/memory/projects/{project_id}/documents/{document_id}/versions` | Append the next version, bearer credential and `Idempotency-Key` required |
 | POST | `/memory/projects/{project_id}/context` | Ranked passages from currently readable documents, bearer credential required |
+| POST | `/memory/projects/{project_id}/answers` | Bounded agent answer with checked citations, bearer credential required |
 
 `/health` is liveness only: the current HTTP application can answer a request.
 It performs no database, identity, connector, memory, authorization or LLM probe
@@ -358,3 +359,62 @@ version of each document and at most 200 readable documents ordered by ID.
 `context_requests` stores scope, decision, result, counts and the query's
 SHA-256, not the query text; `context_items` stores returned version and
 fragment references, not text. Lexical ranking has no synonyms or semantics.
+
+## Agent answers
+
+Stage 06 lets the server run a model on the agent's behalf with one tool,
+`search_memory`, bound to the authenticated agent and the path's project. The
+model is the deterministic offline provider `offline-extractive-v1`; no network
+model is called.
+
+### Ask
+
+Prepare the Stage 05 lab in a database such as `agentic_stage06_lab`, start the
+server and send one question:
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $FIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is the travel limit per trip?"}' \
+  http://127.0.0.1:8005/memory/projects/finance/answers
+```
+
+The body has only `question`: one printable line, 1–500 characters, with at
+least one word. The response has `status` (`answered` or `unanswered`),
+`answer` (text, or `null` when unanswered), `citations`, `provider` and
+`tool_calls`. Each citation has `document_id`, `version_id`, `version_number`,
+`source`, `fragment`, `start` and `end`; read that version to verify
+`content[start:end]`. Responses use `Cache-Control: no-store`.
+
+### Tool and limits
+
+`search_memory` accepts JSON arguments `query` (Stage 05 query rules) and
+optional `max_items` (1–5, default 3), at most 1,024 characters. Unknown tools,
+invalid JSON, duplicate keys, extra keys such as `project_id`, wrong types and
+out-of-range values are returned to the model as `unknown_tool`,
+`arguments_too_large`, `invalid_json` or `invalid_arguments` without echoing the
+input. Each run allows 4 model steps, 3 tool calls, 15 seconds and 24,000
+characters of model input. An answer is 1–2,000 characters and cites at most 10
+distinct passages, each of which must have been returned by this run.
+
+| Status | Meaning |
+| --- | --- |
+| `200` | `answered` with citations, or `unanswered` without text |
+| `401` | Invalid or missing credential |
+| `404` | No read delegation, unknown or foreign project, or a cited passage lost access before the response |
+| `422` | Extra fields or an invalid question |
+| `502` | `provider_error`, `invalid_turn`, `invalid_answer`, `invalid_citation`, `tool_call_limit`, `step_limit` or `transcript_limit` |
+| `504` | `time_limit` |
+| `503` | Storage unavailable or run history could not be stored |
+
+### Guarantees and limits
+
+The scope is checked before the model starts, every tool call is a full Stage 05
+search, and before the response the scope and each cited version are checked
+again under the company lock. Model text without citations is never returned.
+`agent_runs` stores scope, credential ID, provider, outcome, reason, counters and
+the question's SHA-256; `agent_run_searches` links the run's
+`context_requests`; `agent_run_citations` stores cited references. No question,
+answer, passage text or model transcript is stored or logged. There is no rate
+limit, streaming or live model provider yet, and a blocking provider cannot be
+interrupted inside the loop.

@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Annotated, Literal
 from uuid import uuid4
@@ -12,9 +12,11 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.application.agent import ModelProvider, RunLimits
 from app.application.context import ContextOutcome
 from app.application.identity import Principal
 from app.application.memory import MemoryOutcome
+from app.application.offline_model import OfflineProvider
 from app.domain.models import AccessRequest, Action, DocumentVersion, ScopeRequest
 from app.domain.retrieval import MAX_ITEMS, MAX_QUERY_CHARACTERS, query_terms
 from app.domain.versions import derive_version_id
@@ -43,11 +45,13 @@ VersionId = Annotated[str, Path(pattern=IDENTIFIER)]
 
 @dataclass(frozen=True, slots=True)
 class MemoryServices:
-    """Group the adapters and clock one application instance uses for memory."""
+    """Group the adapters, clock and model one application instance uses."""
 
     store: MemoryStore
     authenticator: CredentialAuthenticator
     clock: Callable[[], datetime]
+    provider: ModelProvider = field(default_factory=OfflineProvider)
+    limits: RunLimits = field(default_factory=RunLimits)
 
 
 @dataclass(frozen=True, slots=True)

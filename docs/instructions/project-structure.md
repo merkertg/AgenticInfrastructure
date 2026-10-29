@@ -13,6 +13,7 @@ app/
   intake_lab.py        # guarded all-or-nothing import of fictional text files
   api/
     memory.py          # authenticated memory and context routes and schemas
+    answers.py         # bounded agent answer route and schemas
   domain/
     models.py          # validated immutable objects, actions and reason codes
     policy.py          # deterministic access decisions on supplied objects
@@ -20,10 +21,13 @@ app/
     text.py            # intake text format and located fragments
     retrieval.py       # query rules, BM25 ranking and context budgets
     versions.py        # deterministic version identifiers
+    tool.py            # memory tool schema, argument, question and answer rules
   application/
     memory.py          # result contract for memory operations
     identity.py        # authenticated principal derived from a credential
     context.py         # context-search result contract
+    agent.py           # provider contract, run limits and the bounded agent loop
+    offline_model.py   # deterministic offline provider that quotes passages
   persistence/
     database.py        # PostgreSQL engine and migration helpers
     schema.py          # SQLAlchemy Core tables and relational constraints
@@ -31,12 +35,15 @@ app/
     credentials.py     # hashed bearer credentials, authentication and recheck
     context.py         # authorized candidate loading and context history
     intake.py          # validated all-or-nothing document intake
+    runs.py            # agent run history without question or answer text
     lab.py             # guarded fictional bootstrap for a local lab
 tests/
   conftest.py          # isolated configuration and test client
   test_config.py       # configuration behavior
   test_health.py       # HTTP contract and factory behavior
   test_memory_api.py   # memory API checks that need no database
+  test_agent_runtime.py # agent loop and offline provider with scripted fakes
+  test_answer_api.py   # answer route checks that need no database
   domain/              # domain validation, policy and audit-event checks
   persistence/         # real PostgreSQL migration, credential and HTTP checks
 migrations/
@@ -54,6 +61,7 @@ docs/
   STAGE_03.md          # detailed Russian persistence and transaction guide
   STAGE_04.md          # detailed Russian identity and memory API guide
   STAGE_05.md          # detailed Russian intake and context search guide
+  STAGE_06.md          # detailed Russian agent context tool guide
   ROADMAP.md           # stage boundaries and acceptance criteria
   APPROACH.md          # intended product and architecture
   CI_CD.md             # configured checks and delivery limits
@@ -74,8 +82,11 @@ README.md
 `app/domain` uses standard Python types and has no web, database, configuration
 or model SDK dependencies. The demo composes its objects without importing
 `app.main` or reading application settings. PostgreSQL persistence can be called
-by trusted Python code or by the authenticated HTTP routes. Permission-filtered lexical retrieval is implemented; agent
-runtime and connectors remain future stages.
+by trusted Python code or by the authenticated HTTP routes. Permission-filtered
+lexical retrieval and a bounded agent loop with an offline provider are
+implemented; a live model provider and connectors remain future work.
+`app/application/agent.py` imports neither FastAPI nor SQLAlchemy: its search
+tool is a callable that the HTTP route binds to one agent and project.
 
 The liveness path is `client → Uvicorn → FastAPI → health() → HealthResponse → JSON`.
 `create_app()` reads validated settings, builds a lazy engine when
@@ -90,6 +101,12 @@ lock) → evaluate_access() → audit → commit → JSON`. Denials return one u
 The context path is `Principal → ScopeRequest → MemoryStore.search_context()
 (company lock, credential recheck, evaluate_scope(), readable versions,
 fragments, BM25, final evaluate_access()) → context history → commit → JSON`.
+
+The answer path is `Principal → MemoryStore.check_scope() → run_agent()
+(provider step → parse_search_call() → search_context() per call → citation
+check) → MemoryStore.finish_run() (company lock, scope and cited-version
+recheck, run history) → commit → JSON`. Denials return the uniform `404`,
+failed runs `502` or `504` with an outcome code only.
 
 The offline path is `AccessRequest + supplied objects → evaluate_access() →
 AccessDecision → make_audit_event(decision, occurred_at=...)`. It neither returns

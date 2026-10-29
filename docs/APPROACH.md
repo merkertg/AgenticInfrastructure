@@ -120,6 +120,27 @@ Fragments are computed per request from the latest active version, so no
 derived index or cache can outlive a revocation. History stores references and
 a query digest, not text. See [ADR 0005](adr/0005-permission-filtered-context.md).
 
+Stage 06 gives a model one tool over that search:
+
+```text
+POST /memory/projects/{project}/answers + bearer token
+        ↓
+scope check (model not started when denied)
+        ↓
+model step → search_memory(query, max_items) → strict argument check
+        ↓ (scope from path and token)
+Stage 05 search → result to the model → … at most 4 steps, 3 calls, 15 s
+        ↓
+answer: text + citations ⊆ references returned in this run
+        ↓
+company lock → scope and cited versions rechecked → run history → commit
+```
+
+The model never sees or chooses the project, employee or agent. Uncited text is
+not returned. Losing access to a cited version withholds the whole answer. The
+first provider is deterministic and offline. See
+[ADR 0006](adr/0006-bounded-agent-context-tool.md).
+
 ## Architecture and remaining stages
 
 Grow a modular monolith as working behavior appears:
@@ -127,18 +148,19 @@ Grow a modular monolith as working behavior appears:
 | Layer | Responsibility | First stage |
 | --- | --- | --- |
 | Domain | Implemented offline objects, deterministic policy and audit-event model | 02 |
-| Application | Implemented memory result contract and authenticated principal | 03–04 |
+| Application | Implemented result contracts, authenticated principal and bounded agent loop | 03–06 |
 | Persistence | Implemented PostgreSQL versions, grants, credentials, write replay and audit | 03–04 |
 | Identity and API | Implemented agent bearer credentials and scoped memory version routes | 04 |
 | Retrieval | Implemented bounded intake, permission-filtered search and context provenance | 05 |
-| Agent tool | Bounded context reads through existing application operations | 06 |
+| Agent tool | Implemented one scoped search tool, citation checks and an offline provider | 06 |
 | Corporate adapter | One read-only source, permission synchronization and revocation | 07 |
 | Delivery | Containers, integration evaluations and operating instructions | 08 |
 
 Domain code uses ordinary Python types without FastAPI, database or model SDK
 imports. The PostgreSQL adapter implements explicit memory-operation results.
-Search technology and a model
-provider will be selected when their stages have concrete requirements. Empty
+Lexical search and an offline
+provider are implemented; a live model provider will be selected separately with
+its own evaluations. Empty
 future layers and unused dependencies are not added in advance.
 
 ## Identity and access boundaries

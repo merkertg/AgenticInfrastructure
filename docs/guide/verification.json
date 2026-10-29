@@ -1,14 +1,13 @@
 {
-  "schema_version": 3,
-  "stage": "05",
-  "checked_at": "2026-10-27T05:08:10+05:00",
-  "scope": "Trusted all-or-nothing UTF-8 text intake; permission-filtered deterministic BM25 context search with verifiable fragment references, final recheck and metadata-only history",
+  "schema_version": 4,
+  "stage": "06",
+  "checked_at": "2026-10-29T05:36:59+05:00",
+  "scope": "One server-scoped search_memory tool with strict arguments; bounded provider-neutral agent loop; deterministic offline extractive provider; citations limited to this run's search results; scope check before the model and final scope and cited-version recheck before the answer; metadata-only run history",
   "revision": {
     "branch": "main",
-    "base_commit": "2e229dce0d4f4ae2895c37dd2cc2a7359e359a75",
-    "code_commit": "a83bd3c542aad0fc469f967f0a2561b9ae2bfe17",
-    "state": "published_code_commit",
-    "note": "Local checks ran on the working tree that became the code commit; publication evidence and the documentation restructure follow in a later documentation commit without application changes."
+    "base_commit": "344aaeef2deddb66fa2a27359cd85f8b2f34524f",
+    "state": "uncommitted_working_tree",
+    "note": "Local checks ran on the working tree on top of the base commit; the stage commit, push and CI follow only after the user's decision."
   },
   "runtime": {
     "python": "3.12.15",
@@ -24,46 +23,52 @@
     "mypy": "2.4.0",
     "sqlalchemy": "2.1.4",
     "psycopg": "3.3.6",
-    "alembic": "1.20.0"
+    "alembic": "1.20.0",
+    "reportlab": "4.4.9",
+    "pillow": "13.0.0"
   },
   "lock": {
-    "sha256": "0772eb6b83e5cc05e74f3709dfa2f3576c1e6df54ef9e61533a4cb47f3c1e635",
+    "sha256": "0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974",
     "exclude_newer": "2026-10-10T00:00:00Z",
-    "unchanged_since_stage_03": true
+    "unchanged_since_documentation_update": true
   },
   "environment": {
     "postgres": "PostgreSQL 17.10 (Homebrew)",
-    "temporary_cluster": "recreated after /private/tmp was cleared; previous lab databases were lost",
-    "address": "127.0.0.1:55435"
+    "temporary_cluster": "new cluster in the session temporary directory; LC_ALL=C; Unix socket disabled because the directory path is too long for a socket",
+    "address": "127.0.0.1:55435",
+    "databases": [
+      "agentic_test",
+      "agentic_stage06_lab"
+    ]
   },
   "checks": {
     "sync_locked": {
       "status": "passed",
       "offline": true,
-      "installed_packages_checked": 36,
-      "new_packages_installed": 0
+      "new_packages_installed": 0,
+      "note": "removed the optional guide group until the explicit PDF rebuild"
     },
     "pytest": {
       "status": "passed",
-      "tests_passed": 336,
+      "tests_passed": 460,
       "without_postgres": {
-        "passed": 237,
-        "previous_stages": 192,
-        "text_format": 16,
-        "retrieval_and_scope": 14,
-        "context_api_and_intake_cli": 15
+        "passed": 339,
+        "previous_stages": 243,
+        "tool_rules": 34,
+        "agent_runtime_and_offline_provider": 49,
+        "answer_api": 12,
+        "guide_data": 1
       },
       "postgres": {
-        "passed": 99,
-        "previous_stages": 65,
-        "migrations": 5,
-        "intake": 8,
-        "context": 21,
-        "note": "previous_stages excludes migrations: memory store 24, constraints 6, credentials 10, HTTP memory 25"
+        "passed": 121,
+        "previous_stages": 94,
+        "migrations": 6,
+        "agent_runs": 21,
+        "note": "previous_stages excludes migrations: memory store 24, constraints 6, credentials 10, HTTP memory 25, intake 8, context 21"
       },
       "without_test_database_url": {
-        "passed": 237,
-        "skipped": 99,
+        "passed": 339,
+        "skipped": 121,
         "counts_as_postgres_check": false
       },
       "deprecation_warnings_as_errors": true,
@@ -72,9 +77,12 @@
         "passed_per_run": 3
       },
       "mutation_checks": {
-        "sql_prefilter_and_policy_check_removed": "1 test failed (scores changed by unreadable text); the final recheck still removed unreadable passages",
-        "final_recheck_disabled": "1 test failed (revocation after ranking)",
-        "source_restored": true
+        "final_cited_version_recheck_removed": "1 test failed (revocation before the answer)",
+        "route_scope_check_before_model_removed": "1 test failed (model must not start outside scope)",
+        "extra_tool_arguments_accepted": "5 tests failed (project_id/employee_id in domain, loop and PostgreSQL)",
+        "citations_outside_run_accepted": "7 tests failed (invented references in loop, PostgreSQL and HTTP)",
+        "source_restored": true,
+        "restore_check": "byte comparison with saved copies"
       }
     },
     "ruff_check": {
@@ -82,11 +90,11 @@
     },
     "ruff_format": {
       "status": "passed",
-      "files": 87
+      "files": 100
     },
     "mypy": {
       "status": "passed",
-      "source_files": 60,
+      "source_files": 74,
       "paths": [
         "app",
         "tests",
@@ -96,18 +104,18 @@
     },
     "lock_offline": {
       "status": "passed",
-      "resolved_packages": 40
+      "resolved_packages": 43
     },
     "migration": {
       "status": "passed",
-      "revision": "0003_context_history",
-      "application_tables": 13,
+      "revision": "0004_agent_runs",
+      "application_tables": 16,
       "alembic_check": "No new upgrade operations detected.",
-      "downgrade_to_0002_and_upgrade_test": true
+      "downgrade_to_0003_and_upgrade_test": true
     },
-    "lab_intake": {
+    "lab_answers": {
       "status": "passed",
-      "database": "fresh local agentic_stage05_lab",
+      "database": "fresh local agentic_stage06_lab",
       "imported": {
         "finance": [
           "expense-guide",
@@ -116,59 +124,65 @@
         "engineering": [
           "deploy-notes"
         ]
-      },
-      "corrupted_batch": {
-        "exit_code": 1,
-        "rejected": [
-          [
-            "broken",
-            "not_utf8"
-          ],
-          [
-            "empty",
-            "empty"
-          ]
-        ],
-        "imported": 0
       }
     },
     "http_network_smoke": {
       "status": "passed",
       "server": "uvicorn app.main:app --host 127.0.0.1 --port 8005",
+      "provider": "offline-extractive-v1",
       "responses": {
         "GET /health": 200,
-        "POST finance context, finance agent": "200 found, 3 items, offsets reproduce fixture text",
-        "POST finance context, query zebra": "200 no_authorized_evidence",
-        "POST engineering context, finance agent": 404,
-        "POST engineering context, engineering agent": "200 found, embedded instruction returned as data",
-        "POST finance context, engineering agent": 404,
-        "POST context, unknown token": 401,
-        "POST context with project_id in body": 422,
-        "GET context": 405
+        "POST finance answers, finance agent, travel limit question": "200 answered, 3 citations (travel-policy 2 and 3, expense-guide 2)",
+        "GET cited versions": "200; content[start:end] reproduces the cited paragraphs",
+        "POST finance answers, finance agent, zebra": "200 unanswered, answer null",
+        "POST engineering answers, finance agent": 404,
+        "POST engineering answers, engineering agent, same travel question": "200 answered, 2 citations of deploy-notes only; embedded instruction quoted as data",
+        "POST engineering answers, engineering agent, deployments question": "200 answered, 1 citation",
+        "POST finance answers, engineering agent": 404,
+        "POST answers, unknown token": 401,
+        "POST answers with project_id in body": 422,
+        "GET answers": 405
       },
       "cache_control": "no-store",
       "history_after": {
-        "context_requests": 7,
-        "context_items": 8,
-        "rows_with_credential_id": 7
+        "agent_runs": 6,
+        "answered": 3,
+        "unanswered": 1,
+        "denied_without_model_steps": 2,
+        "agent_run_searches": 4,
+        "agent_run_citations": 6,
+        "context_requests": 4,
+        "rows_with_credential_id": 6
       },
-      "query_or_content_in_history": false,
+      "question_or_content_in_history": false,
       "token_in_server_log": false,
       "server_stopped": true
     },
+    "live_model": {
+      "status": "not_run",
+      "reason": "no live provider is implemented in this stage"
+    },
     "documentation_links": {
       "status": "passed",
-      "local_links": 162,
-      "markdown_files": 26
+      "local_links": 187,
+      "markdown_files": 25
     },
     "whitespace": {
       "status": "passed",
-      "scope": "tracked changes and all new files before the stage commit"
+      "scope": "tracked changes and all new files"
     },
     "function_documentation": {
       "status": "passed",
-      "definitions_checked": 361,
+      "definitions_checked": 532,
       "scope": "all functions and classes in app, tests, scripts and migrations"
+    },
+    "pdf": {
+      "status": "passed",
+      "language": "ru",
+      "pages": 13,
+      "text_extraction": "passed",
+      "visual_review": "all pages rendered at 1400 px and inspected; three defects (missing arrow glyph in the mono font, publication label, outdated FastAPI box label) fixed, changed pages re-inspected and the rest compared on a contact sheet",
+      "guide_packages": "reportlab 4.4.9, pillow 13.0.0 and charset-normalizer 3.5.2 downloaded with locked hashes because the offline uv cache lacked them"
     }
   },
   "publication": {
@@ -255,8 +269,32 @@
         "run_id": 40424738428,
         "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40424738428",
         "postgres_step": "success",
+        "test_counts_in_ci_log": "not_verified",
+        "reconfirmed": "2026-10-29 via GitHub API"
+      }
+    },
+    "stage_05_documentation": {
+      "status": "published",
+      "commit": "344aaeef2deddb66fa2a27359cd85f8b2f34524f",
+      "branch": "main",
+      "remote_ref": "verified",
+      "verified_on": "2026-10-29",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40426585936,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40426585936",
+        "all_steps": "success",
+        "postgres_step": "success",
         "test_counts_in_ci_log": "not_verified"
       }
+    },
+    "stage_06": {
+      "status": "not_published",
+      "commit": "—",
+      "branch": "main",
+      "remote_ref": "not_verified",
+      "github_actions": "not_verified"
     }
   },
   "previous_stages": {
@@ -889,16 +927,266 @@
           }
         }
       }
+    },
+    "05": {
+      "schema_version": 3,
+      "stage": "05",
+      "checked_at": "2026-10-27T05:08:10+05:00",
+      "scope": "Trusted all-or-nothing UTF-8 text intake; permission-filtered deterministic BM25 context search with verifiable fragment references, final recheck and metadata-only history",
+      "revision": {
+        "branch": "main",
+        "base_commit": "2e229dce0d4f4ae2895c37dd2cc2a7359e359a75",
+        "code_commit": "a83bd3c542aad0fc469f967f0a2561b9ae2bfe17",
+        "state": "published_code_commit",
+        "note": "Local checks ran on the working tree that became the code commit; publication evidence and the documentation restructure follow in a later documentation commit without application changes."
+      },
+      "runtime": {
+        "python": "3.12.15",
+        "uv": "0.12.23"
+      },
+      "packages": {
+        "fastapi": "0.143.0",
+        "pydantic": "2.14.0",
+        "pydantic-settings": "2.15.0",
+        "uvicorn": "0.54.0",
+        "pytest": "9.1.1",
+        "ruff": "0.16.10",
+        "mypy": "2.4.0",
+        "sqlalchemy": "2.1.4",
+        "psycopg": "3.3.6",
+        "alembic": "1.20.0"
+      },
+      "lock": {
+        "sha256": "0772eb6b83e5cc05e74f3709dfa2f3576c1e6df54ef9e61533a4cb47f3c1e635",
+        "exclude_newer": "2026-10-10T00:00:00Z",
+        "unchanged_since_stage_03": true
+      },
+      "environment": {
+        "postgres": "PostgreSQL 17.10 (Homebrew)",
+        "temporary_cluster": "recreated after /private/tmp was cleared; previous lab databases were lost",
+        "address": "127.0.0.1:55435"
+      },
+      "checks": {
+        "sync_locked": {
+          "status": "passed",
+          "offline": true,
+          "installed_packages_checked": 36,
+          "new_packages_installed": 0
+        },
+        "pytest": {
+          "status": "passed",
+          "tests_passed": 336,
+          "without_postgres": {
+            "passed": 237,
+            "previous_stages": 192,
+            "text_format": 16,
+            "retrieval_and_scope": 14,
+            "context_api_and_intake_cli": 15
+          },
+          "postgres": {
+            "passed": 99,
+            "previous_stages": 65,
+            "migrations": 5,
+            "intake": 8,
+            "context": 21,
+            "note": "previous_stages excludes migrations: memory store 24, constraints 6, credentials 10, HTTP memory 25"
+          },
+          "without_test_database_url": {
+            "passed": 237,
+            "skipped": 99,
+            "counts_as_postgres_check": false
+          },
+          "deprecation_warnings_as_errors": true,
+          "concurrency_repeats": {
+            "runs": 3,
+            "passed_per_run": 3
+          },
+          "mutation_checks": {
+            "sql_prefilter_and_policy_check_removed": "1 test failed (scores changed by unreadable text); the final recheck still removed unreadable passages",
+            "final_recheck_disabled": "1 test failed (revocation after ranking)",
+            "source_restored": true
+          }
+        },
+        "ruff_check": {
+          "status": "passed"
+        },
+        "ruff_format": {
+          "status": "passed",
+          "files": 87
+        },
+        "mypy": {
+          "status": "passed",
+          "source_files": 60,
+          "paths": [
+            "app",
+            "tests",
+            "scripts",
+            "migrations"
+          ]
+        },
+        "lock_offline": {
+          "status": "passed",
+          "resolved_packages": 40
+        },
+        "migration": {
+          "status": "passed",
+          "revision": "0003_context_history",
+          "application_tables": 13,
+          "alembic_check": "No new upgrade operations detected.",
+          "downgrade_to_0002_and_upgrade_test": true
+        },
+        "lab_intake": {
+          "status": "passed",
+          "database": "fresh local agentic_stage05_lab",
+          "imported": {
+            "finance": [
+              "expense-guide",
+              "travel-policy"
+            ],
+            "engineering": [
+              "deploy-notes"
+            ]
+          },
+          "corrupted_batch": {
+            "exit_code": 1,
+            "rejected": [
+              [
+                "broken",
+                "not_utf8"
+              ],
+              [
+                "empty",
+                "empty"
+              ]
+            ],
+            "imported": 0
+          }
+        },
+        "http_network_smoke": {
+          "status": "passed",
+          "server": "uvicorn app.main:app --host 127.0.0.1 --port 8005",
+          "responses": {
+            "GET /health": 200,
+            "POST finance context, finance agent": "200 found, 3 items, offsets reproduce fixture text",
+            "POST finance context, query zebra": "200 no_authorized_evidence",
+            "POST engineering context, finance agent": 404,
+            "POST engineering context, engineering agent": "200 found, embedded instruction returned as data",
+            "POST finance context, engineering agent": 404,
+            "POST context, unknown token": 401,
+            "POST context with project_id in body": 422,
+            "GET context": 405
+          },
+          "cache_control": "no-store",
+          "history_after": {
+            "context_requests": 7,
+            "context_items": 8,
+            "rows_with_credential_id": 7
+          },
+          "query_or_content_in_history": false,
+          "token_in_server_log": false,
+          "server_stopped": true
+        },
+        "documentation_links": {
+          "status": "passed",
+          "local_links": 162,
+          "markdown_files": 26
+        },
+        "whitespace": {
+          "status": "passed",
+          "scope": "tracked changes and all new files before the stage commit"
+        },
+        "function_documentation": {
+          "status": "passed",
+          "definitions_checked": 361,
+          "scope": "all functions and classes in app, tests, scripts and migrations"
+        }
+      },
+      "not_implemented": [
+        "semantic_or_vector_search",
+        "persisted_search_index",
+        "result_cache",
+        "http_document_intake",
+        "document_deletion_api",
+        "agent_tools",
+        "model_provider",
+        "corporate_identity_provider",
+        "rate_limiting",
+        "tls",
+        "corporate_connector",
+        "containers"
+      ],
+      "limitations": [
+        "Lexical BM25 matches words only, without synonyms or meaning.",
+        "Each search rereads and splits candidate versions; at most 200 readable documents are considered.",
+        "Intake is privileged fictional lab setup.",
+        "Query digests in history can be guessed for short queries.",
+        "Bearer tokens impersonate their agent until expiry or revocation; loopback HTTP only.",
+        "Database owners can modify documents, grants, credentials and history directly.",
+        "PostgreSQL temporary native lab is not a deployed service."
+      ],
+      "documentation_update": {
+        "checked_at": "2026-10-27T05:26:09+05:00",
+        "timezone": "Asia/Yekaterinburg",
+        "base_commit": "a83bd3c542aad0fc469f967f0a2561b9ae2bfe17",
+        "scope": "Align documentation with AI Support Agent; integrate the existing illustrated Russian PDF generator; no application behavior or database schema changes.",
+        "guide_note": "Обновление документации 27.10.2026: 243 passed, 99 skipped без TEST_DATABASE_URL; strict mypy 64 файла, Ruff и ссылки проверены. PostgreSQL и сетевой сценарий повторно не запускались; их результаты ниже исторические. CI нового commit — not_verified. Таблица публикаций хранит прежние записи; сейчас перепроверен только удалённый SHA этапа 05.",
+        "checks": {
+          "pytest": {
+            "passed": 243,
+            "skipped": 99,
+            "postgres_rerun": false
+          },
+          "ruff_check": "passed",
+          "ruff_format": {
+            "status": "passed",
+            "files": 88
+          },
+          "mypy": {
+            "status": "passed",
+            "source_files": 64
+          },
+          "documentation_links": {
+            "status": "passed",
+            "local_links": 168,
+            "markdown_files": 23
+          },
+          "lock_check": "passed",
+          "whitespace": "passed",
+          "pdf": {
+            "status": "passed",
+            "language": "ru",
+            "pages": 12,
+            "visual_review": "all pages rendered and inspected; long machine identifiers formatted as separate lines",
+            "text_extraction": "passed"
+          }
+        },
+        "lock": {
+          "sha256": "0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974",
+          "runtime_resolution_unchanged": true,
+          "new_guide_packages": {
+            "reportlab": "4.4.9",
+            "pillow": "13.0.0",
+            "charset-normalizer": "3.5.2"
+          },
+          "pillow_cutoff_exception": "2026-10-17T00:00:00Z"
+        },
+        "publication": {
+          "branch": "main",
+          "base_remote_ref": "verified",
+          "github_actions": "not_verified",
+          "note": "Stage 05 CI evidence above was already present in the unfinished documentation and was not revalidated during this documentation update."
+        }
+      }
     }
   },
   "not_implemented": [
+    "live_model_provider",
+    "streaming_answers",
     "semantic_or_vector_search",
     "persisted_search_index",
     "result_cache",
     "http_document_intake",
     "document_deletion_api",
-    "agent_tools",
-    "model_provider",
     "corporate_identity_provider",
     "rate_limiting",
     "tls",
@@ -906,65 +1194,15 @@
     "containers"
   ],
   "limitations": [
-    "Lexical BM25 matches words only, without synonyms or meaning.",
-    "Each search rereads and splits candidate versions; at most 200 readable documents are considered.",
-    "Intake is privileged fictional lab setup.",
-    "Query digests in history can be guessed for short queries.",
+    "The offline provider quotes retrieved passages; it does not reason.",
+    "Every tool call is a full permission-filtered search; latency grows with calls and project size.",
+    "The loop cannot interrupt a provider that blocks; a live provider must apply its own timeout.",
+    "No rate limit per agent or employee; the synchronous route holds a worker for the whole run.",
+    "Question and query digests in history can be guessed for short inputs.",
+    "Searches already committed stay recorded if a later step fails with a storage error.",
     "Bearer tokens impersonate their agent until expiry or revocation; loopback HTTP only.",
     "Database owners can modify documents, grants, credentials and history directly.",
     "PostgreSQL temporary native lab is not a deployed service."
   ],
-  "documentation_update": {
-    "checked_at": "2026-10-27T05:26:09+05:00",
-    "timezone": "Asia/Yekaterinburg",
-    "base_commit": "a83bd3c542aad0fc469f967f0a2561b9ae2bfe17",
-    "scope": "Align documentation with AI Support Agent; integrate the existing illustrated Russian PDF generator; no application behavior or database schema changes.",
-    "guide_note": "Обновление документации 27.10.2026: 243 passed, 99 skipped без TEST_DATABASE_URL; strict mypy 64 файла, Ruff и ссылки проверены. PostgreSQL и сетевой сценарий повторно не запускались; их результаты ниже исторические. CI нового commit — not_verified. Таблица публикаций хранит прежние записи; сейчас перепроверен только удалённый SHA этапа 05.",
-    "checks": {
-      "pytest": {
-        "passed": 243,
-        "skipped": 99,
-        "postgres_rerun": false
-      },
-      "ruff_check": "passed",
-      "ruff_format": {
-        "status": "passed",
-        "files": 88
-      },
-      "mypy": {
-        "status": "passed",
-        "source_files": 64
-      },
-      "documentation_links": {
-        "status": "passed",
-        "local_links": 168,
-        "markdown_files": 23
-      },
-      "lock_check": "passed",
-      "whitespace": "passed",
-      "pdf": {
-        "status": "passed",
-        "language": "ru",
-        "pages": 12,
-        "visual_review": "all pages rendered and inspected; long machine identifiers formatted as separate lines",
-        "text_extraction": "passed"
-      }
-    },
-    "lock": {
-      "sha256": "0a1832d87fcd6a4b748d763e0d2f162e3f4b6b528320e1f3faadc6ba8b339974",
-      "runtime_resolution_unchanged": true,
-      "new_guide_packages": {
-        "reportlab": "4.4.9",
-        "pillow": "13.0.0",
-        "charset-normalizer": "3.5.2"
-      },
-      "pillow_cutoff_exception": "2026-10-17T00:00:00Z"
-    },
-    "publication": {
-      "branch": "main",
-      "base_remote_ref": "verified",
-      "github_actions": "not_verified",
-      "note": "Stage 05 CI evidence above was already present in the unfinished documentation and was not revalidated during this documentation update."
-    }
-  }
+  "guide_note": "Проверка этапа 06 29.10.2026: 460 passed (339 без БД, 121 PostgreSQL), strict mypy 74 файла, Ruff, alembic check, ссылки и сетевой сценарий. Настоящая модель не вызывалась. Этап 06 ещё не опубликован: CI — not_verified."
 }

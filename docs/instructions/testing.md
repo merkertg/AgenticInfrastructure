@@ -55,11 +55,19 @@ locked operation. Stage 05 adds all-or-nothing intake, permission filtering
 before ranking, score independence from unreadable documents, explicit empty
 results, revocation and deletion between searches, new and inactive versions,
 other projects and companies, embedded instructions, revocation after ranking,
-search limits and context-history failure. Domain tests cover the text format,
-fragment offsets, query rules, deterministic ranking and project scope. The [persistence guide](usage.md#postgresql-persistence) describes local setup.
+search limits and context-history failure. Stage 06 adds agents of different
+employees in one project, scope denial without starting the model, revocation
+between search and answer, revoked delegation and credential during a run,
+embedded instructions, run-history failure and the answer route's `200`, `404`,
+`422`, `502` and `504` responses. Domain tests cover the text format,
+fragment offsets, query rules, deterministic ranking, project scope and tool
+argument, question and answer rules. Agent-loop tests use a scripted provider,
+a fake search and a fake clock for limits, provider errors, malformed turns and
+invented citations. The [persistence guide](usage.md#postgresql-persistence) describes local setup.
 
 Neither suite establishes production identity integration, semantic retrieval
-quality, corporate source behavior or LLM behavior. A process reconnection and a real
+quality, corporate source behavior or live LLM behavior: the agent tests use the
+offline provider and scripted fakes only. A process reconnection and a real
 database-server restart are different checks; the verification report states
 which was actually performed.
 
@@ -86,6 +94,5 @@ uv run --locked --group guide python -m scripts.build_guide
 ```
 
 Inspect rendered pages as described in [the guide index](../guide/README.md).
-The PDF uses the historical Stage 05 application checks and a separate record of
-the documentation update, so skipped database tests never become a new database
-verification.
+The PDF prints the Stage 06 checks recorded in `docs/guide/verification.json`;
+skipped database tests never count as a database verification.
