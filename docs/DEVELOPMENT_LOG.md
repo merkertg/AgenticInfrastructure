@@ -445,3 +445,14 @@ strict mypy по 96 файлам, `alembic check`, проверка lock и сс
 дорожная карта, README, подход, инструкции, правила проекта и иллюстрированное
 руководство. Результаты — в [отчёте](VERIFICATION.md). Этап 09 подготовлен
 локально; commit/push не выполнялись, CI нового этапа — `not_verified`.
+
+## 2026-10-30 — Публикация этапа 09
+
+По указанию пользователя «Commit and push» изменения этапа оформлены commit
+`74c17b5963cd9c1d76f66470e131a9fc8a1e8d15` (`feat: add stage 09 least-privilege release hardening`)
+и отправлены в `origin/main`. Перед этим `git fetch` подтвердил, что локальная
+и удалённая `main` совпадали на `823eb44`. `git ls-remote` после push показал
+тот же SHA. GitHub API: [запуск 40984776813](https://github.com/merkertg/AgenticInfrastructure/actions/runs/40984776813) для этого SHA завершён
+с `completed / success`. Оба задания и все их шаги — `success`, в том числе
+полный сценарий с проверкой усиления и сканирование образов на чистом
+`ubuntu-24.04`. Журналы шагов не читались: их загрузка требует авторизации.

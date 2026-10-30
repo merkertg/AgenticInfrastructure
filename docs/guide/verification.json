@@ -6,8 +6,9 @@
   "revision": {
     "branch": "main",
     "base_commit": "823eb44e0088cc7f66e8e1571c04cd05df0ec825",
-    "state": "locally_verified_uncommitted",
-    "note": "No commit or push in this verification; earlier publication records are historical."
+    "code_commit": "74c17b5963cd9c1d76f66470e131a9fc8a1e8d15",
+    "state": "published_code_commit",
+    "note": "Local checks ran on the working tree that became the stage 09 commit; its remote ref and CI were verified separately after publication."
   },
   "runtime": {
     "python": "3.12.15",
@@ -279,8 +280,10 @@
       "reason": "local Compose laboratory only"
     },
     "remote_ci": {
-      "status": "not_verified",
-      "reason": "no commit or push in this verification"
+      "status": "passed",
+      "run_id": 40984776813,
+      "runner": "ubuntu-24.04",
+      "evidence": "job and step conclusions via the public GitHub API; the scenario and the scan gate exit non-zero on any failed check"
     },
     "documentation_links": {
       "status": "passed",
@@ -301,7 +304,8 @@
       "pages": 17,
       "text_extraction": "passed with pdftotext -layout; stage 09 section, counts and publication status present",
       "visual_review": "All 17 pages rendered at 1400 px. Changed pages 1-3 and 11-17 inspected; pages 4-10 byte-identical to the published guide after rasterization. Review found revision 0006 missing from the layer table on page 3; fixed, rebuilt, only page 3 changed and was re-inspected. A final rebuild with the updated link count changed only page 15, which was inspected.",
-      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide"
+      "rebuild_command": "uv run --locked --group guide python -m scripts.build_guide",
+      "rebuilt_after_publication": "Rebuilt with stage 09 CI data on 2026-10-30: only page 15 changed after rasterization; it was rendered at 1400 px and inspected, the other 16 pages were byte-identical."
     }
   },
   "publication": {
@@ -463,11 +467,27 @@
       }
     },
     "stage_09": {
-      "status": "locally_verified_uncommitted",
-      "commit": null,
+      "status": "published",
+      "commit": "74c17b5963cd9c1d76f66470e131a9fc8a1e8d15",
       "branch": "main",
-      "remote_ref": "not_published",
-      "github_actions": "not_verified"
+      "remote_ref": "verified",
+      "verified_on": "2026-10-30",
+      "github_actions": {
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40984776813,
+        "url": "https://github.com/merkertg/AgenticInfrastructure/actions/runs/40984776813",
+        "all_steps": "success",
+        "postgres_step": "success",
+        "container_lab_job": "success",
+        "image_scan_step": "success",
+        "job_seconds": {
+          "checks": 50,
+          "container_lab": 80
+        },
+        "test_counts_in_ci_log": "not_verified",
+        "scan_findings_in_ci_log": "not_verified"
+      }
     }
   },
   "previous_stages": {
@@ -2078,5 +2098,5 @@
     "Secrets are host files without rotation; Docker Desktop may need AGENTIC_SECRETS_DIR outside protected macOS folders.",
     "Images still contain HIGH and CRITICAL findings without a released fix; the scan gate can fail when upstream fixes appear."
   ],
-  "guide_note": "Проверка этапа 09 30.10.2026: 651 passed (487 без PostgreSQL, 164 PostgreSQL); strict mypy 96 файлов, Ruff, alembic check, ссылки. Сценарий: 22/22, усиление обоих контейнеров и роли API, восстановление; Trivy — без исправимых HIGH/CRITICAL. Этап 09 локальный, без commit/push; CI — not_verified."
+  "guide_note": "Проверка этапа 09 30.10.2026: 651 passed (487 без PostgreSQL, 164 PostgreSQL); strict mypy 96 файлов, Ruff, alembic check, ссылки. Сценарий: 22/22, усиление обоих контейнеров и роли API, восстановление; Trivy — без исправимых HIGH/CRITICAL. Commit этапа 74c17b5 опубликован в main; CI 40984776813 — success, включая сканирование."
 }
