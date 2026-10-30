@@ -74,7 +74,8 @@ LIMITATIONS = (
     "Откат выключает зеркала; повторный upgrade не восстанавливает владение источника.",
     "Владелец PostgreSQL может напрямую изменить документы, права и историю.",
     "Compose-лаборатория и временный кластер — не развёрнутый сервис.",
-    "Compose подключается к БД суперпользователем; секреты — в переменных окружения.",
+    "Роль сервиса читает все версии и хэши токенов своей базы.",
+    "Секреты — файлы на хосте без ротации; сканер знает только известные CVE.",
     "Оценки покрывают только описанное поведение; проверка цитат — для офлайн-модели.",
     "Учения требуют прав владельца БД и показывают обнаружение, а не защиту.",
     "Замеры описывают один ноутбук и несколько вымышленных документов.",
@@ -91,6 +92,7 @@ SECTIONS = (
     ("Этап 06. Инструмент агента", "один инструмент, лимиты и ссылки"),
     ("Этап 07. Источник для чтения", "Handbook, синхронизация и срок доступа"),
     ("Этап 08. Контейнеры и оценки", "Compose, оценки, копия и восстановление"),
+    ("Этап 09. Усиление выпуска", "роль БД, секреты, контейнеры, сканер"),
     ("Практика: полный сценарий", "команды лаборатории по порядку"),
     ("Проверки, CI и публикация", "фактические результаты"),
     ("Типичные ошибки", "симптом и что проверить"),
@@ -513,7 +515,7 @@ def token_flow(c: Any, w: float, h: float) -> None:
 
 
 def roadmap(c: Any, w: float, h: float, done: int) -> None:
-    """Draw eight stages with implemented ones highlighted."""
+    """Draw nine stages with implemented ones highlighted."""
     names = (
         "API",
         "Правила",
@@ -523,6 +525,7 @@ def roadmap(c: Any, w: float, h: float, done: int) -> None:
         "Инструмент",
         "Источник",
         "Выпуск",
+        "Усиление",
     )
     step = w / len(names)
     y = h - 30
@@ -588,7 +591,7 @@ def cover_painter(facts: GuideFacts) -> Callable[[Any, Any], None]:
         c.drawString(
             MARGIN,
             PAGE_H - 162,
-            f"Наглядное руководство · этапы 01–{facts.stage:02d} из 08 реализованы",
+            f"Наглядное руководство · этапы 01–{facts.stage:02d} из 09 реализованы",
         )
         stat_tiles(
             c,
@@ -599,7 +602,7 @@ def cover_painter(facts: GuideFacts) -> Callable[[Any, Any], None]:
                 (str(facts.tests_total), "тестов прошло"),
                 (str(facts.tests_unit), "без базы данных"),
                 (str(facts.tests_postgres), "с PostgreSQL"),
-                (f"{facts.stage}/8", "этапов готово"),
+                (f"{facts.stage}/9", "этапов готово"),
             ],
         )
         c.setFillColor(INK)
@@ -607,7 +610,7 @@ def cover_painter(facts: GuideFacts) -> Callable[[Any, Any], None]:
         c.drawString(MARGIN, PAGE_H - 290, "Содержание")
         column = W / 2
         for index, (title, subtitle) in enumerate(SECTIONS, start=1):
-            col, row = divmod(index - 1, 7)
+            col, row = divmod(index - 1, 8)
             x = MARGIN + col * column
             y = PAGE_H - 320 - row * 38
             c.setFillColor(BLUE)
@@ -628,7 +631,7 @@ def cover_painter(facts: GuideFacts) -> Callable[[Any, Any], None]:
         notes = (
             f"Проверка: {facts.checked_at}. Исходный commit: {facts.base_commit[:12]}.",
             f"Числа этапа {facts.stage:02d} взяты из verification.json; "
-            "публикация и CI — в разделе 12.",
+            "публикация и CI — в разделе 13.",
             "Все данные вымышленные. Это не корпоративный SSO и не готовый сервис.",
         )
         for index, line in enumerate(notes):
@@ -718,6 +721,11 @@ def build_story(facts: GuideFacts) -> list[Any]:
                     "Контейнеры, независимые оценки, копия и восстановление",
                     "Реализован",
                 ],
+                [
+                    "09",
+                    "Роль БД с минимумом прав, секреты-файлы, сканирование",
+                    "Реализован",
+                ],
             ],
             [40, W - 140, 100],
         ),
@@ -775,13 +783,13 @@ def build_story(facts: GuideFacts) -> list[Any]:
                     "Миграции",
                     mono("migrations"),
                     "Alembic: 0001 схема, 0002 токены, 0003 история поиска, "
-                    "0004 запуски агента, 0005 источники и синхронизация.",
+                    "0004 запуски агента, 0005 источники, 0006 роль сервиса.",
                 ],
                 [
                     "Поставка",
                     mono("compose.yaml"),
-                    "Образ без root, Compose на loopback, /ready; оценки и "
-                    "сценарий восстановления в scripts.",
+                    "Образы без root, Compose на loopback, /ready; роль БД с "
+                    "минимумом прав, секреты-файлы; оценки и восстановление.",
                 ],
             ],
             [70, 110, W - 180],
@@ -1247,19 +1255,94 @@ def build_story(facts: GuideFacts) -> list[Any]:
         ),
         code_block(
             "uv run --locked python -m scripts.compose_lab\n"
-            "# вручную: свой пароль, порты только на 127.0.0.1\n"
-            'export POSTGRES_PASSWORD="$(openssl rand -hex 24)"\n'
+            "# вручную (с этапа 09): секреты-файлы вне Git, порты на 127.0.0.1\n"
+            'export AGENTIC_SECRETS_DIR="$HOME/.agentic-lab-secrets"\n'
+            'uv run --locked python -m scripts.lab_secrets "$AGENTIC_SECRETS_DIR"\n'
             "docker compose up --detach --wait\n"
             "curl -s http://127.0.0.1:8005/ready"
         ),
     ]
 
-    section(story, 11)
+    section(story, 11, VIOLET)
+    story += [
+        p(
+            "Этап 09 сужает права каждой части лаборатории. API подключается к "
+            "PostgreSQL не суперпользователем, а ролью agentic_app; пароли "
+            "передаются файлами; контейнеры работают без root, только для чтения "
+            "и без Linux capabilities; оба образа сканируются на уязвимости."
+        ),
+        heading("Что может роль сервиса"),
+        grid(
+            [
+                ["Таблицы", "Права группы agentic_memory_app"],
+                [
+                    "Политика, токены-хэши, документы, права, источники",
+                    "Только SELECT",
+                ],
+                ["versions, write_requests", "SELECT и INSERT"],
+                ["Аудит, история поиска и ответов", "Только INSERT"],
+                ["companies", "SELECT и UPDATE (name) — только ради блокировки"],
+                ["source_accounts, source_sync_runs", "Нет доступа"],
+            ],
+            [210, W - 210],
+            VIOLET,
+        ),
+        Spacer(1, 6),
+        callout(
+            "<b>Право ради блокировки.</b> SELECT … FOR UPDATE требует права "
+            "изменения столбца. Триггер отклоняет любое реальное изменение "
+            "companies этой ролью с кодом 42501. Изменить права, документы, "
+            "историю, подтверждение источника или схему роль не может; тест "
+            "сверяет права каждой таблицы с этой таблицей.",
+            VIOLET,
+            VIOLET_L,
+        ),
+        heading("Секреты, контейнеры и сканер"),
+        grid(
+            [
+                ["Что", "Как устроено"],
+                [
+                    "Секреты",
+                    "Четыре файла из scripts.lab_secrets; сервис видит только "
+                    "свои; в окружении лишь пути *_FILE",
+                ],
+                [
+                    "app и migrate",
+                    "UID 10001, только чтение, tmpfs /tmp, без capabilities, "
+                    "no-new-privileges",
+                ],
+                [
+                    "db",
+                    "Сразу пользователь postgres, только чтение, без capabilities; "
+                    "gosu удалён",
+                ],
+                [
+                    "Сканирование в CI",
+                    "Trivy 0.75.0 по digest; HIGH/CRITICAL с исправлением "
+                    "роняют задание",
+                ],
+            ],
+            [120, W - 120],
+            VIOLET,
+        ),
+        Spacer(1, 6),
+        p(
+            "В gosu официального образа PostgreSQL были все исправимые находки "
+            "образа БД: 1 CRITICAL и 25 HIGH в устаревшей среде Go. Наш образ "
+            "БД стартует от postgres, поэтому gosu не нужен. Сценарий проверяет "
+            "усиление обоих контейнеров и пробует от имени роли сервиса расширить "
+            "права, продлить источник и стереть аудит — все попытки получают 42501. "
+            "На macOS держите папку секретов вне Desktop и Documents.",
+            BODY_S,
+        ),
+    ]
+
+    section(story, 12)
     story += [
         p(
             "Сценарий на временной локальной PostgreSQL 17 с вымышленными данными. "
-            "Подробные объяснения — в docs/STAGE_03.md … STAGE_08.md. Весь "
-            "сценарий в контейнерах — раздел 10."
+            "Подробные объяснения — в docs/STAGE_03.md … STAGE_09.md. Весь "
+            "сценарий в контейнерах — разделы 10 и 11."
         ),
         heading("1. Лаборатория PostgreSQL"),
         code_block(
@@ -1369,7 +1452,7 @@ def build_story(facts: GuideFacts) -> list[Any]:
         ),
     ]
 
-    section(story, 12, BLUE)
+    section(story, 13, BLUE)
     published = [
         [
             publication_label(entry.name),
@@ -1431,14 +1514,15 @@ def build_story(facts: GuideFacts) -> list[Any]:
             "На каждый push в main: uv sync --locked, Ruff, формат, strict mypy, "
             "тесты без БД, отдельный шаг PostgreSQL-тестов на сервисе postgres:17 "
             "(закреплён по digest), проверка ссылок, lock и пробелов. Второе "
-            "задание container-lab повторяет сценарий этапа 08: сборка образа, "
-            "Compose, оценки, учения, копия и восстановление. Образ не "
-            "публикуется, PDF в CI не собирается.",
+            "задание container-lab повторяет сценарий: сборка образов, Compose, "
+            "оценки, усиление контейнеров и роли БД, учения, копия и "
+            "восстановление, затем сканирует оба образа Trivy. Образы не "
+            "публикуются, PDF в CI не собирается.",
             BODY_S,
         ),
     ]
 
-    section(story, 13, RED)
+    section(story, 14, RED)
     story += [
         grid(
             [
@@ -1492,12 +1576,16 @@ def build_story(facts: GuideFacts) -> list[Any]:
                     "доступность источника; source_sync status handbook",
                 ],
                 [
-                    "Compose: set a URL-safe POSTGRES_PASSWORD",
-                    "Задать пароль, даже для docker compose down",
+                    "invalid mount config … not permitted",
+                    "Docker не видит папку секретов: AGENTIC_SECRETS_DIR вне Desktop",
                 ],
                 [
-                    "migrate завершился с кодом 1",
-                    "Пароль отличается от пароля при создании тома",
+                    "migrate или app: ошибка входа",
+                    "Секреты новее тома: прежние файлы или down --volumes",
+                ],
+                [
+                    "42501 permission denied в API",
+                    "Новой таблице не выданы права в миграции и матрице",
                 ],
                 ["/health 200, но /ready 503", "БД недоступна или схема устарела"],
             ],
@@ -1506,7 +1594,7 @@ def build_story(facts: GuideFacts) -> list[Any]:
         ),
     ]
 
-    section(story, 14, MUTED)
+    section(story, 15, MUTED)
     story += [
         heading("Пока не реализовано"),
         *[p("• " + mono(item), BODY_S) for item in facts.not_implemented],
@@ -1514,16 +1602,16 @@ def build_story(facts: GuideFacts) -> list[Any]:
         *[p("• " + item, BODY_S) for item in LIMITATIONS],
         heading("Что дальше"),
         p(
-            "Все восемь этапов дорожной карты реализованы. За её пределами: "
-            "живая модель с отдельными оценками, корпоративный вход, расписание "
-            "синхронизации, TLS, менеджер секретов, роль БД без лишних прав, "
-            "плановые копии, оповещения и сканирование образа.",
+            "Все девять этапов реализованы. Дальше: живая модель с отдельными "
+            "оценками, корпоративный вход, расписание синхронизации, TLS, "
+            "внешний менеджер секретов с ротацией, построчная изоляция в БД, "
+            "плановые копии и оповещения.",
             BODY_S,
         ),
         Spacer(1, 10),
         callout(
             "Руководство — наглядная сводка. Подробные объяснения находятся "
-            "в docs/STAGE_01–08.md, фактические проверки — в docs/VERIFICATION.md.",
+            "в docs/STAGE_01–09.md, фактические проверки — в docs/VERIFICATION.md.",
             MUTED,
             SOFT,
         ),

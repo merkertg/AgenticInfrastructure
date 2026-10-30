@@ -116,3 +116,46 @@ def test_settings_are_cached_until_clear(monkeypatch: pytest.MonkeyPatch) -> Non
     refreshed = get_settings()
     assert refreshed is not first
     assert refreshed.app_name == "updated"
+
+
+def test_database_url_can_come_from_a_secret_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A mounted file supplies the URL, trimmed, and stays secret in output."""
+    url = "postgresql+psycopg://app:file-secret@db:5432/agentic_lab"
+    Path("database_url").write_text(url + "\n", encoding="utf-8")
+    monkeypatch.setenv("APP_DATABASE_URL_FILE", "database_url")
+    settings = Settings()
+    assert settings.app_database_url is not None
+    assert settings.app_database_url.get_secret_value() == url
+    assert "file-secret" not in repr(settings)
+
+
+@pytest.mark.parametrize(
+    "content",
+    [b"", b"   \n", b"line-one\nline-two", b"\xff\xfe", b"x" * 5000],
+)
+def test_invalid_secret_files_are_rejected_without_echo(
+    monkeypatch: pytest.MonkeyPatch, content: bytes
+) -> None:
+    """Empty, multi-line, non-UTF-8 or oversized files fail without their content."""
+    Path("database_url").write_bytes(content)
+    monkeypatch.setenv("APP_DATABASE_URL_FILE", "database_url")
+    with pytest.raises(ValidationError) as error:
+        Settings()
+    assert "line-one" not in str(error.value)
+
+
+def test_secret_file_must_exist_and_not_duplicate_the_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A missing file or two competing sources stop startup."""
+    monkeypatch.setenv("APP_DATABASE_URL_FILE", "missing")
+    with pytest.raises(ValidationError):
+        Settings()
+    Path("database_url").write_text("postgresql+psycopg://a@db/agentic_lab")
+    monkeypatch.setenv("APP_DATABASE_URL_FILE", "database_url")
+    monkeypatch.setenv("APP_DATABASE_URL", "postgresql+psycopg://b@db/agentic_lab")
+    with pytest.raises(ValidationError) as error:
+        Settings()
+    assert "not both" in str(error.value)

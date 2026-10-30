@@ -185,6 +185,15 @@ re-read every reference as the same agent. The drills show that a deliberately
 corrupted result is detected; they do not prevent a database owner from making
 it. See [ADR 0008](adr/0008-container-lab-and-evaluations.md).
 
+Stage 09 narrows what each part of the lab may do. The API connects as
+`agentic_app`, whose group can read policy and source state and append
+versions and history, but cannot change rights, documents, credentials, history
+or schema; a trigger turns the update privilege needed for the company row lock
+into a lock-only privilege. Secrets are Compose file secrets, containers run
+read-only without capabilities, the database image drops `gosu`, and CI fails
+on fixable HIGH or CRITICAL image vulnerabilities. See
+[ADR 0009](adr/0009-least-privilege-release.md).
+
 ## Architecture and completed stages
 
 Grow a modular monolith as working behavior appears:
@@ -199,6 +208,7 @@ Grow a modular monolith as working behavior appears:
 | Agent tool | Implemented one scoped search tool, citation checks and an offline provider | 06 |
 | Source adapter | Implemented read-only Handbook HTTP adapter, sync and freshness gates | 07 |
 | Delivery | Implemented container lab, readiness, independent evaluations, backup and restore drill | 08 |
+| Release hardening | Implemented least-privilege database role, file secrets, locked-down containers and image scanning | 09 |
 
 Domain code uses ordinary Python types without FastAPI, database or model SDK
 imports. The PostgreSQL adapter implements explicit memory-operation results.
@@ -311,8 +321,9 @@ implementation. A database check is reported as verified only after an actual
 PostgreSQL run, separately from the unit suite.
 
 This is a learning build. Production readiness would require verified identity
-integration, transport security, secret management, a least-privilege database
-role, deployment hardening, operational monitoring with alerting, scheduled
+integration, transport security, external secret management with rotation,
+row-level isolation if the service role must not read other companies,
+operational monitoring with alerting, scheduled
 backups and recovery exercises in the target environment, and a review of the
 organization's actual data policy. None is established by an offline access
 decision, a successful `/health` or `/ready`, or the local Compose laboratory.

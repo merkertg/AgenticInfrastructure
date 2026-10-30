@@ -9,7 +9,7 @@ from sqlalchemy.engine import make_url
 
 ROOT = Path(__file__).resolve().parents[2]
 # The Alembic revision this code expects; a test keeps it equal to the head.
-SCHEMA_HEAD = "0005_source_sync"
+SCHEMA_HEAD = "0006_app_role"
 
 
 def make_engine(database_url: str) -> Engine:

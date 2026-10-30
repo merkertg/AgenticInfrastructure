@@ -2,20 +2,23 @@
 
 The scenario builds the image, starts its own Compose project on loopback ports,
 seeds fictional data through trusted lab setup, synchronizes the fictional
-source and runs the independent evaluations. It then injects an audit failure
-and a permission leak that the checks must catch, backs the database up,
-destroys the volume, restores the backup and evaluates again. The database
-password and all tokens live only in this process; backups and the report go
-to var/, which Git ignores.
+source and runs the independent evaluations. It checks that the API runs
+locked down as the least-privilege role, injects an audit failure and a
+permission leak that the checks must catch, backs the database up,
+destroys the volume, restores the backup and evaluates again. Secret files
+live in a private temporary folder for the run and tokens only in this
+process; backups and the report go to var/, which Git ignores.
 """
 
 import argparse
 import json
 import os
 import secrets
+import shutil
 import statistics
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -25,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import Engine, func, select, text
+from sqlalchemy.exc import DBAPIError
 
 from app.application.source_sync import SyncOutcome
 from app.connectors.handbook import HandbookClient
@@ -50,6 +54,7 @@ from scripts.evaluate import (
     run_cases,
     summary,
 )
+from scripts.lab_secrets import APP_LOGIN, write_secrets
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "fixtures"
@@ -75,22 +80,30 @@ LEAK_CASES = frozenset({"cross-project-context", "cross-project-read"})
 
 
 class Lab:
-    """Drive one disposable Compose project with a password made for this run."""
+    """Drive one disposable Compose project with secret files made for this run."""
 
     def __init__(self, project: str, app_port: int, db_port: int) -> None:
-        """Generate the database password; it is passed only through the environment."""
-        password = secrets.token_urlsafe(24)
+        """Write fresh secret files to a private temporary folder outside the repo.
+
+        Docker Desktop may be unable to read a repository under a protected
+        macOS folder, and per-run secrets should never sit next to the code.
+        """
+        directory = Path(tempfile.mkdtemp(prefix=f"{project}-secrets-"))
+        self.secrets = write_secrets(directory)
         self.project = project
         self.env = {
             **os.environ,
-            "POSTGRES_PASSWORD": password,
+            "AGENTIC_SECRETS_DIR": str(directory),
             "APP_PORT": str(app_port),
             "POSTGRES_PORT": str(db_port),
         }
-        self.database_url = (
-            f"postgresql+psycopg://agentic:{password}@127.0.0.1:{db_port}/agentic_lab"
-        )
+        self.database_url = self.secrets.host_url(db_port)
+        self.app_database_url = self.secrets.host_url(db_port, app=True)
         self.base_url = f"http://127.0.0.1:{app_port}"
+
+    def remove_secrets(self) -> None:
+        """Delete this run's secret folder."""
+        shutil.rmtree(self.secrets.directory, ignore_errors=True)
 
     def __repr__(self) -> str:
         """Show the project and API address without the password."""
@@ -463,7 +476,94 @@ def environment() -> dict[str, Any]:
         "image_bytes": int(
             docker("image", "inspect", "--format", "{{.Size}}", _image())
         ),
+        "db_image_bytes": int(
+            docker(
+                "image",
+                "inspect",
+                "--format",
+                "{{.Size}}",
+                os.environ.get("DB_IMAGE", "agentic-infrastructure-db:local"),
+            )
+        ),
     }
+
+
+def _inspect(lab: Lab, service: str) -> dict[str, Any]:
+    """Return docker inspect data of one running service container."""
+    container = lab.compose("ps", "--quiet", service).decode().strip()
+    data: list[dict[str, Any]] = json.loads(
+        subprocess.run(
+            ["docker", "inspect", container], capture_output=True, check=True
+        ).stdout
+    )
+    return data[0]
+
+
+def _locked_down(inspected: dict[str, Any], user: str) -> bool:
+    """Tell whether a container runs as the user, read-only, without capabilities."""
+    host = inspected["HostConfig"]
+    return (
+        host["ReadonlyRootfs"] is True
+        and host["CapDrop"] == ["ALL"]
+        and "no-new-privileges:true" in (host["SecurityOpt"] or [])
+        and inspected["Config"]["User"] == user
+    )
+
+
+def hardening_check(lab: Lab, engine: Engine) -> dict[str, Any]:
+    """Confirm both containers run locked down and the API uses the service role."""
+    inspected, database = _inspect(lab, "app"), _inspect(lab, "db")
+    host, config = inspected["HostConfig"], inspected["Config"]
+    environment = " ".join(
+        [*(config.get("Env") or []), *(database["Config"].get("Env") or [])]
+    )
+    with engine.connect() as connection:
+        users = sorted(
+            connection.scalars(
+                text(
+                    "SELECT DISTINCT usename FROM pg_stat_activity "
+                    "WHERE datname = 'agentic_lab' AND backend_type = 'client backend'"
+                )
+            )
+        )
+    denied: dict[str, str | None] = {}
+    restricted = make_engine(lab.app_database_url)
+    try:
+        for name, statement in (
+            ("widen_grant", 'UPDATE grants SET actions = \'["read", "write"]\''),
+            ("extend_source", "UPDATE sources SET confirmed_at = now()"),
+            ("erase_audit", "DELETE FROM audit_events"),
+        ):
+            try:
+                with restricted.begin() as connection:
+                    connection.execute(text(statement))
+                denied[name] = None
+            except DBAPIError as error:
+                denied[name] = getattr(error.orig, "sqlstate", None)
+    finally:
+        restricted.dispose()
+    secrets_in_env = any(
+        value in environment
+        for value in (lab.secrets.owner_password, lab.secrets.app_password)
+    )
+    result = {
+        "read_only_root": host["ReadonlyRootfs"],
+        "cap_drop": host["CapDrop"],
+        "security_opt": host["SecurityOpt"],
+        "user": config["User"],
+        "password_in_environment": secrets_in_env,
+        "database_users": users,
+        "service_role_denials": denied,
+    }
+    result["db_locked_down"] = _locked_down(database, "postgres")
+    result["passed"] = (
+        _locked_down(inspected, "app")
+        and result["db_locked_down"]
+        and not secrets_in_env
+        and APP_LOGIN in users
+        and all(code == "42501" for code in denied.values())
+    )
+    return result
 
 
 def _image() -> str:
@@ -508,6 +608,8 @@ def main(argv: list[str] | None = None) -> int:
         step("running independent evaluations")
         initial = run_cases(api, cases)
         report["evaluations"] = summary(initial)
+        step("container and database role hardening")
+        report["hardening"] = hardening_check(lab, engine)
         step("audit failure drill")
         report["audit_drill"] = audit_drill(engine, api)
         step("permission leak drill")
@@ -520,6 +622,7 @@ def main(argv: list[str] | None = None) -> int:
         passed = (
             all(result.passed for result in initial)
             and report["seed"]["corrupted_intake"] == [["broken-scan", "not_utf8"]]
+            and report["hardening"]["passed"]
             and report["audit_drill"]["passed"]
             and report["tamper_drill"]["passed"]
             and report["backup_restore"]["passed"]
@@ -535,6 +638,7 @@ def main(argv: list[str] | None = None) -> int:
             report["kept"] = {
                 "base_url": lab.base_url,
                 "tokens": str(saved.relative_to(ROOT)),
+                "secrets": str(lab.secrets.directory),
             }
     except (subprocess.CalledProcessError, RuntimeError, OSError) as error:
         report["error"] = type(error).__name__
@@ -557,8 +661,9 @@ def main(argv: list[str] | None = None) -> int:
         if engine is not None:
             engine.dispose()
         if not args.keep:
-            step("removing the disposable project and its volume")
+            step("removing the disposable project, its volume and secrets")
             lab.compose("down", "--volumes", "--remove-orphans")
+            lab.remove_secrets()
     report["passed"] = passed
     report["finished_at"] = datetime.now(UTC).isoformat()
     reports = VAR / "reports"

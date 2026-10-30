@@ -137,3 +137,17 @@ It needs no `.env` and creates its own password and tokens. Exit status `0`
 means all 22 evaluations passed before and after restore, the corrupted import
 was rejected, both drills behaved as expected and the timed requests returned
 `200`. Unit tests never start Docker.
+
+## Database role and release hardening
+
+`tests/persistence/test_app_role.py` compares every table's privileges for
+`agentic_memory_app` with the documented matrix, runs every memory operation and
+HTTP route as a temporary login in that group, and checks that widening grants,
+rewriting history, extending source confirmation, reading the audit trail,
+renaming a company and changing the schema fail with `42501`. The test database
+user must be allowed to create roles. `tests/test_config.py` covers
+`APP_DATABASE_URL_FILE`; `tests/test_compose_lab.py` covers secret files.
+
+The container scenario additionally inspects both containers and the API's
+database user. Image scanning runs in CI; the local command is in
+[usage](usage.md#image-scanning).

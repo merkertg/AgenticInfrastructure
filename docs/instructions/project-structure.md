@@ -5,7 +5,7 @@
 ```text
 app/
   __init__.py          # application version
-  config.py            # validated, cached configuration
+  config.py            # validated, cached configuration and secret-file reader
   main.py              # health and readiness, application factory and ASGI entry point
   demo.py              # deterministic fictional offline policy cases
   persistence_demo.py  # fictional PostgreSQL scenario
@@ -69,6 +69,7 @@ scripts/
   build_guide.py       # explicit CLI for the illustrated Russian PDF guide
   evaluate.py          # HTTP evaluation runner and pure response checks
   compose_lab.py       # full disposable container scenario with drills and restore
+  lab_secrets.py       # private secret files for the Compose lab
 docs/
   STAGE_01.md          # detailed Russian learning guide
   STAGE_02.md          # detailed Russian domain and policy guide
@@ -78,6 +79,7 @@ docs/
   STAGE_06.md          # detailed Russian agent context tool guide
   STAGE_07.md          # detailed Russian source synchronization guide
   STAGE_08.md          # detailed Russian container, evaluation and restore guide
+  STAGE_09.md          # detailed Russian least-privilege release guide
   ROADMAP.md           # stage boundaries and acceptance criteria
   APPROACH.md          # intended product and architecture
   CI_CD.md             # configured checks and delivery limits
@@ -89,7 +91,8 @@ docs/
 .github/workflows/ci.yml # checks job and container-lab job
 Dockerfile             # two-stage, digest-pinned, non-root application image
 .dockerignore
-compose.yaml           # db, one-shot migrate and app on loopback ports
+compose.yaml           # db, one-shot migrate and app; file secrets, locked down
+docker/postgres/       # database image: pinned PostgreSQL, role script, no gosu
 .env.example
 .python-version
 pyproject.toml
@@ -146,7 +149,7 @@ company lock. Search filters expired sources in SQL before loading text;
 `source_denials()` also protects direct version reads, appends and final answer
 checks. A synchronization does not create employee identity or agent delegation.
 
-The container path is `compose up → db healthy → migrate (alembic upgrade head)
-→ app → /ready`. Lab tools, the fictional source and evaluations run on the host
+The container path is `compose up → db healthy → migrate as the schema owner
+(alembic upgrade head) → app as agentic_app → /ready`. Lab tools, the fictional source and evaluations run on the host
 against loopback ports; `scripts/compose_lab.py` composes them into one
 reproducible scenario.

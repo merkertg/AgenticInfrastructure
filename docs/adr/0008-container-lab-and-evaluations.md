@@ -15,6 +15,10 @@ for corporate data, and measurements must describe a concrete environment.
 
 ## Decision
 
+Stage 09 later replaced the password variable with file secrets and a
+least-privilege service role; see [ADR 0009](0009-least-privilege-release.md).
+
+
 Build one application image in two stages. The builder copies a digest-pinned
 uv 0.12.23 and runs `uv sync --locked --no-dev`; the runtime, based on a
 digest-pinned `python:3.12.15-slim`, holds only the virtual environment, `app`,

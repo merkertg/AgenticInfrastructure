@@ -107,3 +107,35 @@ jobs:
       - name: Show the scenario report
         if: always()
         run: cat var/reports/agentic-stage08.json || true
+
+      # Both lab images are scanned by a digest-pinned Trivy image rather than a
+      # mutable action tag. HIGH and CRITICAL findings with a released fix fail
+      # the job; findings without a fix are printed but do not block.
+      - name: Scan images for known vulnerabilities
+        env:
+          TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+        run: |
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
+          scan() {
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$RUNNER_TEMP/trivy-cache:/cache" \
+              "$TRIVY_IMAGE" --cache-dir /cache image --quiet --scanners vuln "$@"
+          }
+          for attempt in 1 2 3; do
+            if scan --download-db-only; then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "Trivy vulnerability database download failed 3 times" >&2
+              exit 1
+            fi
+            sleep 20
+          done
+          status=0
+          for image in agentic-infrastructure:local agentic-infrastructure-db:local; do
+            scan --skip-db-update --severity HIGH,CRITICAL "$image"
+            scan --skip-db-update --severity HIGH,CRITICAL --ignore-unfixed \
+              --exit-code 1 "$image" || status=1
+          done
+          exit "$status"

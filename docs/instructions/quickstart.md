@@ -74,13 +74,15 @@ backs up and restores itself in a disposable Compose project:
 uv run --locked python -m scripts.compose_lab
 ```
 
-To keep a stack for manual work, start the Compose services yourself:
+To keep a stack for manual work, create the secret files once and start the
+Compose services yourself:
 
 ```bash
-export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+export AGENTIC_SECRETS_DIR="$HOME/.agentic-lab-secrets"
+uv run --locked python -m scripts.lab_secrets "$AGENTIC_SECRETS_DIR"
 docker compose up --detach --wait
 curl -s http://127.0.0.1:8005/ready
 ```
 
-See [the container laboratory](usage.md#container-laboratory) and the
-[Russian Stage 08 guide](../STAGE_08.md).
+See [the container laboratory](usage.md#container-laboratory) and the Russian
+guides for [Stage 08](../STAGE_08.md) and [Stage 09](../STAGE_09.md).

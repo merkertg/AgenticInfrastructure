@@ -11,8 +11,10 @@ use a disposable PostgreSQL 17 service and a database ending in `_test`.
 A second job, `container-lab`, runs `python -m scripts.compose_lab` on a clean
 runner: it builds the image, starts a disposable Compose project, runs the
 evaluations, the audit-failure and permission-leak drills and a backup and
-restore, then prints the JSON report (no tokens or passwords). The checks job
-uses the same digest-pinned PostgreSQL image as `compose.yaml`.
+restore and the container hardening check, then prints the JSON report (no
+tokens or passwords) and scans both images with digest-pinned Trivy, failing on
+HIGH or CRITICAL findings that have a released fix. The checks job uses the
+same digest-pinned PostgreSQL image as the database image.
 
 The workflow has read-only repository permissions. It does not publish an
 image, deploy a service or use corporate credentials. PDF generation is a

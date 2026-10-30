@@ -104,7 +104,7 @@ def test_credential_revision_downgrades_to_initial_schema(
         migrate(postgres_url)
     with engine.connect() as connection:
         revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
-    assert revision == "0005_source_sync"
+    assert revision == "0006_app_role"
     audit_columns = {
         column["name"] for column in inspect(engine).get_columns("audit_events")
     }
@@ -245,3 +245,47 @@ def test_source_downgrade_keeps_mirrors_unavailable(
         ).decision.reason
         is ReasonCode.DOCUMENT_UNAVAILABLE
     )
+
+
+def _app_grants(engine: Engine) -> int:
+    """Count table privileges held by the service role in this database."""
+    with engine.connect() as connection:
+        return int(
+            connection.scalar(
+                text(
+                    "SELECT count(*) FROM information_schema.role_table_grants "
+                    "WHERE grantee = 'agentic_memory_app'"
+                )
+            )
+            or 0
+        )
+
+
+def test_role_revision_downgrades_to_source_schema(
+    engine: Engine, postgres_url: str
+) -> None:
+    """Reverting Stage 09 removes grants and the guard, keeping tables and the role."""
+    configuration = Config(str(ROOT / "alembic.ini"))
+    configuration.set_main_option("script_location", str(ROOT / "migrations"))
+    assert _app_grants(engine) > 0
+    try:
+        with engine.begin() as connection:
+            configuration.attributes["connection"] = connection
+            command.downgrade(configuration, "0005_source_sync")
+        assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES
+        assert _app_grants(engine) == 0
+        with engine.connect() as connection:
+            assert not connection.scalar(
+                text(
+                    "SELECT count(*) FROM pg_trigger "
+                    "WHERE tgname = 'companies_reject_memory_app_update'"
+                )
+            )
+            assert connection.scalar(
+                text(
+                    "SELECT count(*) FROM pg_roles WHERE rolname = 'agentic_memory_app'"
+                )
+            )
+    finally:
+        migrate(postgres_url)
+    assert _app_grants(engine) > 0

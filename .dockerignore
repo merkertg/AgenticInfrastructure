@@ -27,3 +27,4 @@ docs/
 compose.yaml
 Dockerfile
 .dockerignore
+docker/

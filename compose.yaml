@@ -1,6 +1,8 @@
-# Stage 08 container laboratory: PostgreSQL, a one-shot migration and the API.
+# Container laboratory: PostgreSQL, a one-shot migration and the API.
 # Lab tools (seeding, credentials, the fictional source and evaluations) run on
 # the host through the loopback ports below; nothing listens on other interfaces.
+# Secrets are files created by `python -m scripts.lab_secrets`, not variables;
+# set AGENTIC_SECRETS_DIR when Docker cannot read the repository folder.
 name: agentic-infrastructure
 
 # Migration and API run from one image built from this repository.
@@ -8,20 +10,40 @@ x-application: &application
   image: ${APP_IMAGE:-agentic-infrastructure:local}
   build:
     context: .
+  # No writable root, no Linux capabilities and no privilege gain on exec.
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
 
 services:
   db:
-    # Pinned by index digest; the same tag can later point to another image.
-    image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
+    # The digest-pinned PostgreSQL image plus the one-time role script.
+    image: ${DB_IMAGE:-agentic-infrastructure-db:local}
+    build:
+      context: docker/postgres
     environment:
       POSTGRES_USER: agentic
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a URL-safe POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: agentic_lab
+    secrets:
+      - postgres_password
+      - app_db_password
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-55436}:5432"
     volumes:
       # A plain down keeps this volume; down --volumes deletes the lab data.
       - postgres_data:/var/lib/postgresql/data
+    # Runs as postgres without root, capabilities or a writable image layer.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql:uid=999,gid=999,mode=2775
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       # TCP is checked after initialization, not the temporary init server.
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U agentic -d agentic_lab"]
@@ -33,8 +55,11 @@ services:
   migrate:
     <<: *application
     command: ["python", "-m", "alembic", "upgrade", "head"]
+    # The schema owner migrates; the API never receives this URL.
     environment:
-      DATABASE_URL: postgresql+psycopg://agentic:${POSTGRES_PASSWORD:?set a URL-safe POSTGRES_PASSWORD}@db:5432/agentic_lab
+      DATABASE_URL_FILE: /run/secrets/migrate_database_url
+    secrets:
+      - migrate_database_url
     depends_on:
       db:
         condition: service_healthy
@@ -45,9 +70,12 @@ services:
 
   app:
     <<: *application
+    # The API connects as agentic_app, a member of the least-privilege role.
     environment:
       APP_ENV: development
-      APP_DATABASE_URL: postgresql+psycopg://agentic:${POSTGRES_PASSWORD:?set a URL-safe POSTGRES_PASSWORD}@db:5432/agentic_lab
+      APP_DATABASE_URL_FILE: /run/secrets/app_database_url
+    secrets:
+      - app_database_url
     ports:
       - "127.0.0.1:${APP_PORT:-8005}:8000"
     depends_on:
@@ -62,6 +90,16 @@ services:
       timeout: 5s
       retries: 20
       start_period: 5s
+
+secrets:
+  postgres_password:
+    file: ${AGENTIC_SECRETS_DIR:-./var/secrets}/postgres_password
+  app_db_password:
+    file: ${AGENTIC_SECRETS_DIR:-./var/secrets}/app_db_password
+  migrate_database_url:
+    file: ${AGENTIC_SECRETS_DIR:-./var/secrets}/migrate_database_url
+  app_database_url:
+    file: ${AGENTIC_SECRETS_DIR:-./var/secrets}/app_database_url
 
 volumes:
   postgres_data:

@@ -5,7 +5,7 @@ employees. It implements the shared-memory alternative of the
 `#AgenticInfrastructure` assignment. All companies, employees and documents are
 fictional laboratory data.
 
-**Stages 01–08 are implemented:** FastAPI, deterministic access policy,
+**Stages 01–09 are implemented:** FastAPI, deterministic access policy,
 PostgreSQL version storage and audit, hashed bearer credentials, trusted text
 intake, permission-filtered BM25 context search, and a bounded agent that
 answers through one server-scoped memory tool with citation checks. The server
@@ -17,7 +17,9 @@ reader grants; expired source confirmation blocks reads and derived answers.
 A digest-pinned, non-root image runs with PostgreSQL in Docker Compose; one
 scenario rebuilds the lab from scratch, runs 22 independent evaluations, proves
 they catch an injected permission leak and an audit failure, and restores a
-backup after volume loss. The model provider is deterministic and offline; a
+backup after volume loss. The API connects through a least-privilege database
+role, secrets are files, containers are read-only without capabilities, and CI
+scans both images for fixable vulnerabilities. The model provider is deterministic and offline; a
 real corporate connection, a live model and a corporate deployment remain
 unverified. Actual checks and publication evidence are recorded separately in
 [verification](docs/VERIFICATION.md).
@@ -39,6 +41,7 @@ container scenario needs only Docker and uv.
 | 06 | Bounded context tool for an agent and offline model provider | Implemented |
 | 07 | Read-only Handbook HTTP source, synchronization and freshness gates | Implemented |
 | 08 | Container lab, readiness, independent evaluations, backup and restore | Implemented |
+| 09 | Least-privilege database role, file secrets, locked-down containers, image scanning | Implemented |
 
 See the [detailed roadmap and completion criteria](docs/ROADMAP.md).
 
@@ -62,6 +65,7 @@ Detailed learning guides in Russian:
 - [Stage 06: bounded agent context tool](docs/STAGE_06.md)
 - [Stage 07: read-only source synchronization](docs/STAGE_07.md)
 - [Stage 08: containers, evaluations and restore](docs/STAGE_08.md)
+- [Stage 09: least-privilege release](docs/STAGE_09.md)
 - [CI/CD guide](docs/CI_CD.md)
 - [Illustrated PDF guide](docs/guide/agentic-infrastructure-guide.pdf) and [rebuild instructions](docs/guide/README.md)
 - [Verification report](docs/VERIFICATION.md) and [machine-readable evidence](docs/guide/verification.json)
@@ -77,4 +81,5 @@ Design and history:
 - [Bounded agent context tool](docs/adr/0006-bounded-agent-context-tool.md)
 - [Read-only source synchronization](docs/adr/0007-read-only-source-sync.md)
 - [Container laboratory and evaluations](docs/adr/0008-container-lab-and-evaluations.md)
+- [Least-privilege release](docs/adr/0009-least-privilege-release.md)
 - [Development log](docs/DEVELOPMENT_LOG.md)

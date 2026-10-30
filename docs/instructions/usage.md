@@ -537,29 +537,68 @@ deployment. See the [Russian Stage 08 guide](../STAGE_08.md) and
 
 The `Dockerfile` installs runtime dependencies from `uv.lock` with a
 digest-pinned uv and copies only `app`, `migrations` and `alembic.ini` onto a
-digest-pinned `python:3.12.15-slim`. The service runs as UID 10001; its code is
-not writable. `compose.yaml` defines `db` (PostgreSQL 17, digest-pinned, volume
+digest-pinned `python:3.12.15-slim`. `compose.yaml` defines `db` (a small image
+built from digest-pinned PostgreSQL 17 in `docker/postgres`, volume
 `postgres_data`), a one-shot `migrate` (`alembic upgrade head`) and `app`.
+Since Stage 09 secrets are files and every container is locked down; see the
+[Russian Stage 09 guide](../STAGE_09.md) and
+[ADR 0009](../adr/0009-least-privilege-release.md).
 
 ```bash
-export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+export AGENTIC_SECRETS_DIR="$HOME/.agentic-lab-secrets"
+uv run --locked python -m scripts.lab_secrets "$AGENTIC_SECRETS_DIR"
 docker compose up --detach --wait
 docker compose ps
 ```
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `POSTGRES_PASSWORD` | required | URL-safe password, fixed when the volume is created |
+| `AGENTIC_SECRETS_DIR` | `./var/secrets` | Folder of the four secret files |
 | `APP_PORT` | `8005` | API port on `127.0.0.1` |
 | `POSTGRES_PORT` | `55436` | PostgreSQL port on `127.0.0.1` for host lab tools |
-| `APP_IMAGE` | `agentic-infrastructure:local` | Image name Compose builds and runs |
+| `APP_IMAGE` / `DB_IMAGE` | `agentic-infrastructure:local` / `agentic-infrastructure-db:local` | Image names Compose builds |
 
-Compose interpolates the file for every command, so set `POSTGRES_PASSWORD` even
-for `down`. A different password against an existing volume makes `migrate`
-fail; `docker compose down --volumes` deletes the lab data. Earlier lab tools
-run on the host with
-`DATABASE_URL=postgresql+psycopg://agentic:$POSTGRES_PASSWORD@127.0.0.1:55436/agentic_lab`
-and keep their loopback `_lab` guard.
+`scripts.lab_secrets` writes `postgres_password`, `app_db_password`,
+`migrate_database_url` and `app_database_url` (folder `0700`, files `0644`) and
+never overwrites them: passwords are fixed when the volume is created. Each
+service mounts only its own files; containers receive `*_FILE` paths, never
+passwords. Docker Desktop on macOS may be unable to mount files from a
+repository under `Desktop`, `Documents` or `Downloads` (`invalid mount config …
+operation not permitted`); keep the secrets folder elsewhere as above.
+`docker compose down --volumes` deletes the lab data. Host lab tools use the
+owner role:
+`DATABASE_URL="postgresql+psycopg://agentic:$(cat "$AGENTIC_SECRETS_DIR/postgres_password")@127.0.0.1:55436/agentic_lab"`.
+
+### Database role and container hardening
+
+The API connects as `agentic_app`, a member of `agentic_memory_app`, which
+migration `0006_app_role` grants `SELECT` on policy, credential and source-state
+tables, `SELECT, INSERT` on `versions` and `write_requests`, `INSERT` only on
+audit and history tables and nothing on source account mappings or sync runs.
+`UPDATE (name)` on `companies` exists only for the row lock; a trigger rejects
+every actual update by the role (`42501`). The role cannot widen access, alter
+history, extend source confirmation, read the audit trail or change the schema.
+Migrations, lab tools and synchronization use the owner role.
+
+`app` and `migrate` run as UID 10001, `db` as `postgres`; all have read-only
+root file systems, tmpfs scratch paths, no Linux capabilities and
+`no-new-privileges`. The database image has no `gosu`.
+
+### Image scanning
+
+The CI job `container-lab` scans both images with digest-pinned
+`aquasec/trivy:0.75.0` and fails on HIGH or CRITICAL findings that have a
+released fix:
+
+```bash
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa \
+  image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+  agentic-infrastructure:local
+```
+
+The gate can start failing without code changes when an upstream fix is
+published; update the base-image digest. Unfixed findings are listed only.
 
 ### Readiness and errors
 
@@ -590,6 +629,9 @@ drill the evaluations must catch, backup, volume loss, restore, equal row counts
 and evaluation outcomes, and sequential latency. The JSON report goes to stdout
 and `var/reports/agentic-stage08.json`; exit status `1` means a check failed.
 `--keep` leaves the stack running and writes `var/lab/tokens.json` (mode `0600`).
+Since Stage 09 the scenario writes its secrets to a private temporary folder
+outside the repository, deletes it afterwards and fails unless both containers
+are locked down and the API's database role is refused three forbidden changes.
 
 ### Backup and restore
 
@@ -610,7 +652,8 @@ after `max_age` until the next successful sync.
 
 ### Limits
 
-The lab uses the PostgreSQL superuser, environment secrets and plain HTTP on
-loopback. It has no TLS, SSO, image registry, vulnerability scan, scheduled
-backups, alerting or retention policy. Latency numbers in the report describe
+The service role still reads every document version and credential hash of its
+database; secrets are host files without rotation; HTTP is plain on loopback.
+There is no TLS, SSO, image registry, scheduled backups, alerting or retention
+policy. Latency numbers in the report describe
 one laptop and a few fictional documents, not capacity.

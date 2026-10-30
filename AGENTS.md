@@ -53,6 +53,11 @@
   bind Compose ports to loopback only. Keep backups, reports and lab tokens in
   the ignored `var/` directory. Evaluations state expected behavior
   independently and must fail on a deliberately corrupted result.
+- The API connects through the least-privilege role `agentic_memory_app`.
+  Every new table needs an explicit privilege decision in its migration and in
+  the role's privilege-matrix test. Pass secrets as files, never as variables.
+  Containers stay read-only without capabilities, and both images must pass the
+  fixable HIGH/CRITICAL scan.
 - Publish only locally verified changes when publication is authorized. Verify
   remote refs independently from CI. A workflow file or a successful push does
   not prove that GitHub Actions passed.
